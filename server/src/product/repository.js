@@ -11,8 +11,12 @@ export default class ProductRepository {
     return allGeneric(Product, "product");
   }
 
-  async findBy({ productType, productFeature }) {
-    if (typeof productType !== "undefined" && productType !== null) {
+  async findBy({ producerNr, productType, productFeature }) {
+    if (typeof producerNr !== "undefined" && producerNr !== null) {
+      return db("product")
+        .where({ producer: producerNr })
+        .then(products => products.map(product => new Product(product)));
+    } else if (typeof productType !== "undefined" && productType !== null) {
       return db
         .select("product")
         .from("producttypeproduct")

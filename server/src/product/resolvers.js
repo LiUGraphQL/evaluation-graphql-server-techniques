@@ -11,13 +11,15 @@ export default {
     producer: ({ producer }, _, { repository }) => {
       return repository.producer.get(producer);
     },
-    productType: ({ nr }, _, { repository }) => {
+    type: ({ nr }, _, { repository }) => {
       return repository.productType.findBy({ product: nr });
     },
-    productFeature: ({ nr }, _, { repository }) => {
+    features: ({ nr }, _, { repository }) => {
       return repository.productFeature.findBy({ product: nr });
     },
-    reviews: ({ nr }, { order: { field, direction } }, { repository }) => {
+    reviews: ({ nr }, args, { repository }) => {
+      // using || {} because order might be undefined which otherwise will throw an error.
+      const { order: field, direction } = args || {};
       return repository.review.sortBy({ productId: nr, field, direction });
     },
     offers: ({ nr }, { where }, { repository }) => {

@@ -11,27 +11,41 @@ export default {
     offers: ({ nr }, { limit, offset }, { repository }) => {
       return repository.offer.findBy({ nr, limit, offset });
     },
-    offersConnection: async ({ nr }, { first, after }, { repository }) => {
-      return { nr, first, after };
+    offersConnection: ({ nr }, _, { repository }) => {
+      return { nr };
     }
   },
   CollectionOfEdgesToOffers: {
-    aggregate: ({ nr, first, after }, args) => {
-      return { nr, first, after };
+    aggregate: async ({ nr }, _, { repository }) => {
+      return { offers: await repository.offer.findBy({ nr }) };
     }
   },
   AggregateOffers: {
-    count: async ({ nr, first, after }, _, { repository }) => {
-      return repository.offer.countBy({ nr, first, after });
+    count: ({ offers }, _, { repository }) => {
+      return offers.length;
     },
-    sum: ({ nr, first, after }, _, { repository }) => {
-      return repository.offer.sumBy({ nr, first, after });
+    price: parent => parent
+  },
+  PriceAggregationOfOffers: {
+    avg: ({ offers }) => {
+      const prices = getPricesFromOffers(offers);
+      const sum = sumPrices(prices);
+      return sum / offers.length;
     },
-    max: ({ nr, first, after }, _, { repository }) => {
-      return repository.offer.maxBy({ nr, first, after });
+    sum: ({ offers }) => {
+      const prices = getPricesFromOffers(offers);
+      return sumPrices(prices);
     },
-    min: ({ nr, first, after }, _, { repository }) => {
-      return repository.offer.minBy({ nr, first, after });
+    max: ({ offers }) => {
+      const prices = getPricesFromOffers(offers);
+      return Math.max(...prices);
+    },
+    min: ({ offers }) => {
+      const prices = getPricesFromOffers(offers);
+      return Math.min(...prices);
     }
   }
 };
+
+const getPricesFromOffers = offers => offers.map(offer => offer.price);
+const sumPrices = prices => prices.reduce((curr, accu) => curr + accu, 0);

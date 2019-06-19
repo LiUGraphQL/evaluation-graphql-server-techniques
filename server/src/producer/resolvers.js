@@ -6,5 +6,10 @@ export default {
     producers: (root, args, { repository }) => {
       return repository.producer.all();
     }
+  },
+  Producer: {
+    products: ({ nr }, _, { repository }) => {
+      return repository.product.findBy({ producerNr: nr });
+    }
   }
 };

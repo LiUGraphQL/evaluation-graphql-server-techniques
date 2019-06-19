@@ -5,6 +5,19 @@ This repo contains three different parts.
 1. A GraphQL server implementation
 2. Database
 3. Test-driver
+
+# Usage
+
+To setup and run the server/database together just run the docker-compose files.
+
+For development:
+```
+docker-compose -f docker-compose.dev.yaml up
+```
+For production:
+```
+docker-compose up
+```
    
 ## GraphQL server implementation
 

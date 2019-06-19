@@ -25,71 +25,54 @@ export default class OfferRepository {
     return query.then(response => response.map(offer => new Offer(offer)));
   }
 
-  async countBy({ nr: vendorId, first, after }) {
-    const firstDefined = typeof first !== "undefined" && first !== null;
-    const afterDefined = typeof after !== "undefined" && after !== null;
-
-    let query = db.count("nr as count").from(function() {
-      this.select()
-        .where({ vendor: vendorId })
-        .from("offer");
-      if (firstDefined) this.limit(first);
-      if (afterDefined) this.andWhere("publishDate", ">", after);
-      this.as("inner");
-    });
-
+  async countBy({ nr: vendorId }) {
+    let query = db("offer")
+      .count("nr as count")
+      .where({ vendor: vendorId });
     return query.then(([response]) => response.count);
   }
 
-  async sumBy({ nr: vendorId, first, after }) {
-    const firstDefined = typeof first !== "undefined" && first !== null;
-    const afterDefined = typeof after !== "undefined" && after !== null;
+  async avgBy({ nr: vendorId }) {
+    let query = db("offer")
+      .avg({ avg: "price" })
+      .where({ vendor: vendorId });
+    return query.then(([respnse]) => response.avg);
+  }
 
-    let query = db.sum("price as sum").from(function() {
-      this.select()
-        .where({ vendor: vendorId })
-        .from("offer");
-      if (firstDefined) this.limit(first);
-      if (afterDefined) this.andWhere("publishDate", ">", after);
-      this.as("inner");
-    });
-
+  async sumBy({ nr: vendorId }) {
+    let query = db("offer")
+      .sum("price as sum")
+      .where({ vendor: vendorId });
     return query.then(([response]) => response.sum);
   }
 
-  async maxBy({ nr: vendorId, first, after }) {
-    const firstDefined = typeof first !== "undefined" && first !== null;
-    const afterDefined = typeof after !== "undefined" && after !== null;
-
-    let query = db.max("price as max").from(function() {
-      this.select()
-        .where({ vendor: vendorId })
-        .from("offer");
-      if (firstDefined) this.limit(first);
-      if (afterDefined) this.andWhere("publishDate", ">", after);
-      this.as("inner");
-    });
-
+  async maxBy({ nr: vendorId }) {
+    let query = db("offer")
+      .max("price as max")
+      .where({ vendor: vendorId })
+      .from("offer");
     return query.then(([response]) => response.max);
   }
 
-  async minBy({ nr: vendorId, first, after }) {
-    const firstDefined = typeof first !== "undefined" && first !== null;
-    const afterDefined = typeof after !== "undefined" && after !== null;
-
-    let query = db.min("price as min").from(function() {
-      this.select()
-        .where({ vendor: vendorId })
-        .from("offer");
-      if (firstDefined) this.limit(first);
-      if (afterDefined) this.andWhere("publishDate", ">", after);
-      this.as("inner");
-    });
-
+  async minBy({ nr: vendorId }) {
+    let query = db("offer")
+      .min("price as min")
+      .where({ vendor: vendorId })
+      .from("offer");
     return query.then(([response]) => response.min);
+  }
+
+  whereHelper(query, where) {
+    if (where.AND) {
+    } else if (where.OR) {
+    } else if (where.NOT) {
+    }
   }
 
   // TODO figure out a clever way to solve this issue
   // probably needs to do some recursion here
-  async where(where) {}
+  async where(where) {
+    let query = db("offer");
+    query = this.whereHelper(query, where);
+  }
 }

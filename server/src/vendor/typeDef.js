@@ -10,15 +10,19 @@ export default gql`
     publisher: Int
     publishDate: Date
     offers(limit: Int, offset: Int): [Offer]
-    offersConnection(first: Int, after: String): CollectionOfEdgesToOffers
+    offersConnection: CollectionOfEdgesToOffers
   }
 
   type CollectionOfEdgesToOffers {
-    aggregate: AggregateOffers
+    aggregate: AggregateOffers!
   }
 
   type AggregateOffers {
     count: Int!
+    price: PriceAggregationOfOffers
+  }
+
+  type PriceAggregationOfOffers {
     sum: Float
     avg: Float
     max: Float

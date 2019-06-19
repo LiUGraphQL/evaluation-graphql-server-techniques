@@ -6,8 +6,8 @@ export default gql`
     label: String
     comment: String
     producer: Producer
-    productType: ProductType
-    productFeature: [ProductFeature]
+    type: ProductType
+    features: [ProductFeature]
     publishDate: Date
     reviews(order: ReviewSortingCriterion): [Review]
     offers(where: OfferWhereInput): [Offer]
