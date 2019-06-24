@@ -13,22 +13,6 @@ export default gql`
     offersConnection: CollectionOfEdgesToOffers
   }
 
-  type CollectionOfEdgesToOffers {
-    aggregate: AggregateOffers!
-  }
-
-  type AggregateOffers {
-    count: Int!
-    price: PriceAggregationOfOffers
-  }
-
-  type PriceAggregationOfOffers {
-    sum: Float
-    avg: Float
-    max: Float
-    min: Float
-  }
-
   extend type Query {
     vendor(nr: ID!): Vendor
     vendors: [Vendor]

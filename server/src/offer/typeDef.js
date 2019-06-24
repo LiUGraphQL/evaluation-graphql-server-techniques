@@ -14,6 +14,45 @@ export default gql`
     vendor: Vendor
   }
 
+  type CollectionOfEdgesToOffers {
+    aggregate: AggregateOffers!
+  }
+
+  type AggregateOffers {
+    count: Int!
+    price: PriceAggregationOfOffers!
+  }
+
+  type PriceAggregationOfOffers {
+    sum: Float!
+    avg: Float!
+    max: Float!
+    min: Float!
+  }
+
+  input OfferWhereInput {
+    AND: [OfferWhereInput!]
+    NOT: OfferWhereInput
+    OR: [OfferWhereInput]
+    vendor: VendorFieldInput
+  }
+
+  input VendorFieldInput {
+    nr: ID
+    comment: [StringMatching]
+    publishDate: [DateMatching]
+  }
+
+  input StringMatching {
+    criterion: StringCriterion
+    pattern: String
+  }
+
+  input DateMatching {
+    criterion: DateCriterion
+    date: Date
+  }
+
   extend type Query {
     offer(nr: ID!): Offer
     offers: [Offer]

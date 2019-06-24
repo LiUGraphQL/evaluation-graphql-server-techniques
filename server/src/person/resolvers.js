@@ -6,5 +6,8 @@ export default {
     persons: (root, args, { repository }) => {
       return repository.person.all();
     }
+  },
+  Person: {
+    country: ({ country }) => country
   }
 };

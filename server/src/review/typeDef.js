@@ -15,6 +15,11 @@ export default gql`
     reviewFor: Product
   }
 
+  input ReviewSortingCriterion {
+    field: ReviewFieldInput
+    direction: SortDirection
+  }
+
   extend type Query {
     review(nr: ID!): Review
     reviews: [Review]

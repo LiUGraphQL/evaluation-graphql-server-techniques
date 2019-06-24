@@ -6,6 +6,7 @@ import { resolvers as productFeatureResolvers } from "./productFeature";
 import { resolvers as producerResolvers } from "./producer";
 import { resolvers as offerResolvers } from "./offer";
 import { resolvers as vendorResolvers } from "./vendor";
+import { resolvers as countryResolvers } from "./country";
 
 export default [
   productResolvers,
@@ -15,5 +16,6 @@ export default [
   productFeatureResolvers,
   producerResolvers,
   offerResolvers,
-  vendorResolvers
+  vendorResolvers,
+  countryResolvers
 ];

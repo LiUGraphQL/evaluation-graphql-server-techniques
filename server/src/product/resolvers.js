@@ -8,7 +8,7 @@ export default {
     }
   },
   Product: {
-    producer: ({ producer }, _, { repository }) => {
+    producer: ({ producer }, args, { repository }) => {
       return repository.producer.get(producer);
     },
     type: ({ nr }, _, { repository }) => {
@@ -20,10 +20,14 @@ export default {
     reviews: ({ nr }, args, { repository }) => {
       // using || {} because order might be undefined which otherwise will throw an error.
       const { order: field, direction } = args || {};
-      return repository.review.sortBy({ productId: nr, field, direction });
+      return repository.review.sortBy({
+        productId: nr,
+        field,
+        direction
+      });
     },
-    offers: ({ nr }, { where }, { repository }) => {
-      return repository.offer.where(where);
+    offers: (_, { where }, { repository }) => {
+      return repository.offer.whereInputToSqlQuery(where);
     }
   }
 };

@@ -36,7 +36,7 @@ export default class OfferRepository {
     let query = db("offer")
       .avg({ avg: "price" })
       .where({ vendor: vendorId });
-    return query.then(([respnse]) => response.avg);
+    return query.then(([response]) => response.avg);
   }
 
   async sumBy({ nr: vendorId }) {
@@ -62,17 +62,104 @@ export default class OfferRepository {
     return query.then(([response]) => response.min);
   }
 
-  whereHelper(query, where) {
-    if (where.AND) {
-    } else if (where.OR) {
-    } else if (where.NOT) {
+  // TODO figure out a clever way to solve this issue
+  // probably needs to do some recursion here
+  async whereInputToSqlQuery(input) {
+    // First we want to resolve all the vendors.
+    let vendorQuery = db("vendor").select("nr");
+    const { vendor, AND, OR, NOT } = input;
+    if (vendor) vendorQuery = this.resolveVendorField(vendorQuery, vendor);
+    if (AND) vendorQuery = this.resolveAndField(vendorQuery, AND);
+    if (OR) vendorQuery = this.resolveOrField(vendorQuery, OR);
+
+    let query = db("offer").where("vendor", "in", vendorQuery);
+    return query.then(response => {
+      // Response will be all the offers that match
+      // the input criterion for the vendors.
+      console.log(response);
+      console.log(query.toString());
+
+      return null;
+    });
+  }
+
+  resolveAndField(query, andInput) {
+    andInput.forEach(({ vendor }) => {
+      query = this.resolveVendorField(query, vendor, "and");
+    });
+    return query;
+  }
+
+  resolveOrField(query, orInput) {
+    orInput.forEach(({ vendor }) => {
+      query = this.resolveVendorField(query, vendor, "or");
+    });
+    return query;
+  }
+
+  resolveVendorField(query, vendorInput, operator) {
+    const { nr, comment, publishDate } = vendorInput;
+    switch (operator) {
+      case "and":
+        if (nr) {
+          return query.andWhere({ nr });
+        }
+      case "or":
+        if (nr) {
+          return query.orWhere({ nr });
+        }
+    }
+    if (comment) {
+      comment.forEach(c => {
+        query = this.resolveVendorCommentField(query, c, operator);
+      });
+    }
+    if (publishDate) {
+      publishDate.forEach(p => {
+        query = this.resolveVendorPublishDateField(query, p, operator);
+      });
+    }
+
+    return query;
+  }
+
+  resolveVendorCommentField(query, comment, operator) {
+    const { criterion, pattern } = comment;
+    let matchPattern;
+    switch (criterion) {
+      case "CONTAINS":
+        matchPattern = `%${pattern}%`;
+        break;
+      case "START_WITH":
+        matchPattern = `${pattern}%`;
+        break;
+      case "END_WITH":
+        matchPattern = `%${pattern}`;
+        break;
+      case "EQUALS":
+        matchPattern = `${pattern}`;
+        break;
+    }
+    switch (operator) {
+      case "and":
+        return query.andWhere("comment", "like", matchPattern);
+      case "or":
+        return query.orWhere("comment", "like", matchPattern);
+      default:
+        return query.where("comment", "like", matchPattern);
     }
   }
 
-  // TODO figure out a clever way to solve this issue
-  // probably needs to do some recursion here
-  async where(where) {
-    let query = db("offer");
-    query = this.whereHelper(query, where);
+  resolveVendorPublishDateField(query, publishDate) {
+    const { criterion, date } = publishDate;
+    const column = "publishDate";
+    switch (criterion) {
+      case "BEFORE":
+        return query.where(column, "<", date);
+      case "AFTER":
+        return query.where(column, ">", date);
+      case "EQUALS":
+        return query.where(column, pattern);
+    }
   }
 }

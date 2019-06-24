@@ -32,10 +32,16 @@ export default gql`
     DESC
   }
 
-  enum MatchCriterion {
+  enum StringCriterion {
     CONTAINS
     START_WITH
     END_WITH
+    EQUALS
+  }
+
+  enum DateCriterion {
+    BEFORE
     AFTER
+    EQUALS
   }
 `;
