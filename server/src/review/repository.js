@@ -25,4 +25,25 @@ export default class ReviewRepository {
 
     return query.then(response => response.map(review => new Review(review)));
   }
+
+  async search({ field, criterion, pattern }) {
+    let query = db("review");
+    let matchPattern;
+    switch (criterion) {
+      case "CONTAINS":
+        matchPattern = `%${pattern}%`;
+        break;
+      case "START_WITH":
+        matchPattern = `${pattern}%`;
+        break;
+      case "END_WITH":
+        matchPattern = `%${pattern}`;
+        break;
+      case "EQUALS":
+        matchPattern = `${pattern}`;
+        break;
+    }
+    query.where(field, "like", matchPattern);
+    return query.then(response => response.map(review => new Review(review)));
+  }
 }

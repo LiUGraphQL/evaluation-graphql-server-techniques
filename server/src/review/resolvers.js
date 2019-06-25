@@ -5,6 +5,9 @@ export default {
     },
     reviews: (root, args, { repository }) => {
       return repository.review.all();
+    },
+    reviewSearch: (root, { field, criterion, pattern }, { repository }) => {
+      return repository.review.search({ field, criterion, pattern });
     }
   },
   Review: {

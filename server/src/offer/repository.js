@@ -12,15 +12,12 @@ export default class OfferRepository {
   }
 
   async findBy({ nr: vendorNr, limit, offset }) {
-    const limitDefined = typeof limit !== "undefined" && limit !== null;
-    const offsetDefined = typeof offset !== "undefined" && offset !== null;
-
     let query = db
       .select()
       .from("offer")
       .where({ vendor: vendorNr });
-    if (limitDefined) query.limit(limit);
-    if (offsetDefined) query.offset(offset);
+    if (limit) query.limit(limit);
+    if (offset) query.offset(offset);
 
     return query.then(response => response.map(offer => new Offer(offer)));
   }

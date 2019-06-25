@@ -23,5 +23,10 @@ export default gql`
   extend type Query {
     review(nr: ID!): Review
     reviews: [Review]
+    reviewSearch(
+      field: ReviewFieldInput!
+      criterion: StringCriterion!
+      pattern: String!
+    ): [Review]
   }
 `;
