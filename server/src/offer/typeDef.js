@@ -39,8 +39,8 @@ export default gql`
 
   input VendorFieldInput {
     nr: ID
-    comment: [StringMatching]
-    publishDate: [DateMatching]
+    comment: StringMatching
+    publishDate: DateMatching
   }
 
   input StringMatching {
@@ -53,8 +53,13 @@ export default gql`
     date: Date
   }
 
+  input OrderFieldInput {
+    orderField1: OffersSortingField
+    orderField2: OffersSortingField
+  }
+
   extend type Query {
     offer(nr: ID!): Offer
-    offers: [Offer]
+    offers(where: OfferWhereInput, limit: Int, order: OrderFieldInput): [Offer]
   }
 `;

@@ -44,4 +44,15 @@ export default gql`
     AFTER
     EQUALS
   }
+
+  enum OffersSortingField {
+    nr
+    price
+    validFrom
+    validTo
+    deliveryDays
+    offersWebpage
+    publisher
+    publishDate
+  }
 `;

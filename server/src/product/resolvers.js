@@ -26,8 +26,8 @@ export default {
         direction
       });
     },
-    offers: (_, { where }, { repository }) => {
-      return repository.offer.whereInputToSqlQuery(where);
+    offers: ({ nr }, { where }, { repository }) => {
+      return repository.offer.productOffers({ where, productNr: nr });
     }
   }
 };

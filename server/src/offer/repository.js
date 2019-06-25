@@ -62,24 +62,34 @@ export default class OfferRepository {
     return query.then(([response]) => response.min);
   }
 
-  // TODO figure out a clever way to solve this issue
-  // probably needs to do some recursion here
-  async whereInputToSqlQuery(input) {
+  async offers({ where, limit, order }) {
+    return this.where({ where, limit, order });
+  }
+
+  async productOffers({ productNr, where }) {
+    return this.where({ where, productNr });
+  }
+
+  async where({ where, limit, productNr, order }) {
     // First we want to resolve all the vendors.
     let vendorQuery = db("vendor").select("nr");
-    const { vendor, AND, OR, NOT } = input;
+    const { vendor, AND, OR, NOT } = where;
     if (vendor) vendorQuery = this.resolveVendorField(vendorQuery, vendor);
     if (AND) vendorQuery = this.resolveAndField(vendorQuery, AND);
     if (OR) vendorQuery = this.resolveOrField(vendorQuery, OR);
+    // TODO: NOT - maybe not
 
     let query = db("offer").where("vendor", "in", vendorQuery);
-    return query.then(response => {
-      // Response will be all the offers that match
-      // the input criterion for the vendors.
-      console.log(response);
-      console.log(query.toString());
+    if (productNr) query.andWhere("product", productNr);
+    if (limit) query.limit(limit);
+    if (order) {
+      const { orderField1, orderField2 } = order;
+      query.orderBy([orderField1, orderField2]);
+    }
 
-      return null;
+    return query.then(response => {
+      console.log(query.toString());
+      return response.map(offer => new Offer(offer));
     });
   }
 
@@ -99,28 +109,23 @@ export default class OfferRepository {
 
   resolveVendorField(query, vendorInput, operator) {
     const { nr, comment, publishDate } = vendorInput;
-    switch (operator) {
-      case "and":
-        if (nr) {
-          return query.andWhere({ nr });
-        }
-      case "or":
-        if (nr) {
+    if (nr) {
+      switch (operator) {
+        // no need to have a case for "and"
+        // since it is used on all cases where
+        // operator is not defined
+        case "or":
           return query.orWhere({ nr });
-        }
+        default:
+          return query.andWhere({ nr });
+      }
     }
     if (comment) {
-      comment.forEach(c => {
-        query = this.resolveVendorCommentField(query, c, operator);
-      });
+      return this.resolveVendorCommentField(query, comment, operator);
     }
     if (publishDate) {
-      publishDate.forEach(p => {
-        query = this.resolveVendorPublishDateField(query, p, operator);
-      });
+      return this.resolveVendorPublishDateField(query, publishDate, operator);
     }
-
-    return query;
   }
 
   resolveVendorCommentField(query, comment, operator) {
@@ -150,16 +155,22 @@ export default class OfferRepository {
     }
   }
 
-  resolveVendorPublishDateField(query, publishDate) {
+  resolveVendorPublishDateField(query, publishDate, operator) {
     const { criterion, date } = publishDate;
-    const column = "publishDate";
+    let dateEquality;
     switch (criterion) {
       case "BEFORE":
-        return query.where(column, "<", date);
+        dateEquality = "<";
       case "AFTER":
-        return query.where(column, ">", date);
+        dateEquality = ">";
       case "EQUALS":
-        return query.where(column, pattern);
+        dateEquality = "=";
+    }
+    switch (operator) {
+      case "AND":
+        return query.andWhere("publishDate", dateEquality, date);
+      case "OR":
+        return query.orWhere("publishDate", dateEquality, date);
     }
   }
 }

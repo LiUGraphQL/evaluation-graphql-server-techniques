@@ -3,8 +3,8 @@ export default {
     offer: (root, { nr }, { repository }) => {
       return repository.offer.get(nr);
     },
-    offers: (root, args, { repository }) => {
-      return repository.offer.all();
+    offers: (root, { where, limit, order }, { repository }) => {
+      return repository.offer.offers({ where, limit, order });
     }
   },
   Offer: {
