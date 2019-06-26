@@ -17,9 +17,9 @@ export default {
     features: ({ nr }, _, { repository }) => {
       return repository.productFeature.findBy({ product: nr });
     },
-    reviews: ({ nr }, args, { repository }) => {
+    reviews: ({ nr }, { order }, { repository }) => {
       // using || {} because order might be undefined which otherwise will throw an error.
-      const { order: field, direction } = args || {};
+      const { field, direction } = order || {};
       return repository.review.sortBy({
         productId: nr,
         field,

@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import { ApolloServer } from "apollo-server";
+import v8 from "v8";
 
 import typeDefs from "./typeDefs";
 import resolvers from "./resolvers";

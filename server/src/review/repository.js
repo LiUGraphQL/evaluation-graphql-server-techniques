@@ -17,6 +17,7 @@ export default class ReviewRepository {
       typeof direction !== "undefined" && direction !== null;
 
     let query = db("review").where({ product: productId });
+
     if (fieldDefined && directionDefined) {
       query.orderBy(field, direction);
     } else if (fieldDefined) {

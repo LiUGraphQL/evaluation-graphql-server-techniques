@@ -9,7 +9,8 @@
     "backpack-core": "^0.8.4",
     "commander": "^2.20.0",
     "graphql-request": "^1.8.2",
-    "prettyjson": "^1.2.1"
+    "prettyjson": "^1.2.1",
+    "traverse": "^0.6.6"
   },
   "scripts": {
     "dev": "backpack",

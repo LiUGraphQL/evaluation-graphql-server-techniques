@@ -3,6 +3,7 @@ import { lstatSync, readdirSync, readFileSync } from "fs";
 import program from "commander";
 import { request } from "graphql-request";
 import prettyjson from "prettyjson";
+import traverse from "traverse";
 
 const SERVER_URL = "http://localhost:4000";
 
@@ -31,14 +32,23 @@ const getFiles = source =>
 const queryTemplatesDirs = getDirectories(actualQueriesPath);
 // TODO: Remove this .flat() and arrange the queries into groups
 // TODO: This will help with time-tracking.
-const queryPaths = queryTemplatesDirs.map(dirPath => getFiles(dirPath)).flat();
+const queryTemplates = queryTemplatesDirs.map(dirPath => {
+  const queryPaths = getFiles(dirPath);
+  let queryTemplate = dirPath.split("/").pop();
+  let queryTemplateNumber = queryTemplate.split("_").pop();
 
-const queries = queryPaths.map(path =>
-  readFileSync(path, "utf-8", (err, data) => {
-    if (err) throw err;
-    return data;
-  })
-);
+  const queries = queryPaths.map(path =>
+    readFileSync(path, "utf-8", (err, data) => {
+      if (err) throw err;
+      return data;
+    })
+  );
+
+  return {
+    queryTemplate: queryTemplateNumber,
+    queries: queries
+  };
+});
 
 const asyncForEach = async (array, callback) => {
   for (let index = 0; index < array.length; index++) {
@@ -47,18 +57,31 @@ const asyncForEach = async (array, callback) => {
 };
 
 const start = async () => {
-  await asyncForEach(queries, async (query, index) => {
-    try {
-      console.log("Sending query:", index);
-      const response = await request(SERVER_URL, query);
-      console.log("Response recieved from query:", index);
-      // console.log(response);
-    } catch (err) {
-      console.log("ERROR - EXITING");
-      console.log("QUERY:", query);
-      console.log(err);
-      process.exit(1);
-    }
+  await asyncForEach(queryTemplates, async ({ queryTemplate, queries }) => {
+    console.log("\n");
+    console.log("QUERY TEMPLATE:", queryTemplate);
+    await asyncForEach(queries, async (query, index) => {
+      try {
+        console.log("\n");
+        console.log("Sending query:", index);
+        let startTime = process.hrtime();
+        const response = await request(SERVER_URL, query);
+        let endTime = process.hrtime(startTime);
+        console.log("Response recieved from query:", index);
+        let leaves = traverse(response).reduce(function(acc, x) {
+          if (this.isLeaf) acc.push(x);
+          return acc;
+        }, []);
+        console.log("Number of leaf-nodes:", leaves.length);
+        console.log("Query time: %ds %dms", endTime[0], endTime[1] / 1000000);
+        // console.log(response);
+      } catch (err) {
+        console.log("ERROR - EXITING");
+        console.log("QUERY:", query);
+        console.log(prettyjson.render(err));
+        process.exit(1);
+      }
+    });
   });
 };
 

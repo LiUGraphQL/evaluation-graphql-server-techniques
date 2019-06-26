@@ -58,6 +58,10 @@ export default gql`
 
   extend type Query {
     offer(nr: ID!): Offer
-    offers(where: OfferWhereInput, limit: Int, order: OrderFieldInput): [Offer]
+    offers(
+      where: OfferWhereInput
+      limit: Int
+      order: [OffersSortingField]
+    ): [Offer]
   }
 `;

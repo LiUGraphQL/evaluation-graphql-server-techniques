@@ -70,16 +70,16 @@ export default class OfferRepository {
   async where({ where, limit, productNr, order }) {
     // First we want to resolve all the vendors.
     let vendorQuery = db("vendor").select("nr");
-    const { vendor, AND } = where;
+    const { vendor, AND } = where || {}; // || {} if where is undefined
     if (vendor) vendorQuery = this.resolveVendorField(vendorQuery, vendor);
     if (AND) vendorQuery = this.resolveAndField(vendorQuery, AND);
 
-    let query = db("offer").where("vendor", "in", vendorQuery);
+    let query = db("offer");
+    if (vendor) query.where("vendor", "in", vendorQuery);
     if (productNr) query.andWhere("product", productNr);
     if (limit) query.limit(limit);
     if (order) {
-      const { orderField1, orderField2 } = order;
-      query.orderBy([orderField1, orderField2]);
+      query.orderBy(order);
     }
 
     return query.then(response => {
@@ -134,10 +134,13 @@ export default class OfferRepository {
     switch (criterion) {
       case "BEFORE":
         dateEquality = "<";
+        break;
       case "AFTER":
         dateEquality = ">";
+        break;
       case "EQUALS":
         dateEquality = "=";
+        break;
     }
     return query.andWhere("publishDate", dateEquality, date);
   }

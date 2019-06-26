@@ -44,7 +44,7 @@ export default gql`
     validFrom
     validTo
     deliveryDays
-    offersWebpage
+    offerWebpage
     publisher
     publishDate
   }
