@@ -16,8 +16,15 @@ export default gql`
   }
 
   enum ReviewFieldInput {
+    nr
     title
     text
+    reviewDate
+    rating1
+    rating2
+    rating3
+    rating4
+    publishDate
   }
 
   enum SortDirection {

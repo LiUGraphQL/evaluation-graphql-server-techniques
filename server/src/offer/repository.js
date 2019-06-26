@@ -78,12 +78,9 @@ export default class OfferRepository {
     if (vendor) query.where("vendor", "in", vendorQuery);
     if (productNr) query.andWhere("product", productNr);
     if (limit) query.limit(limit);
-    if (order) {
-      query.orderBy(order);
-    }
+    if (order) query.orderBy(order);
 
     return query.then(response => {
-      console.log(query.toString());
       return response.map(offer => new Offer(offer));
     });
   }

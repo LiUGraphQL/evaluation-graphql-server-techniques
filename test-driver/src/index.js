@@ -30,8 +30,6 @@ const getFiles = source =>
     .filter(isFile);
 
 const queryTemplatesDirs = getDirectories(actualQueriesPath);
-// TODO: Remove this .flat() and arrange the queries into groups
-// TODO: This will help with time-tracking.
 const queryTemplates = queryTemplatesDirs.map(dirPath => {
   const queryPaths = getFiles(dirPath);
   let queryTemplate = dirPath.split("/").pop();
