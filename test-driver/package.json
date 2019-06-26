@@ -6,6 +6,14 @@
   "author": "Lukas Lindqvist",
   "license": "MIT",
   "dependencies": {
-    "graphql-request": "^1.8.2"
+    "backpack-core": "^0.8.4",
+    "commander": "^2.20.0",
+    "graphql-request": "^1.8.2",
+    "prettyjson": "^1.2.1"
+  },
+  "scripts": {
+    "dev": "backpack",
+    "build": "backpack build",
+    "start": "node ./build/main.js"
   }
 }

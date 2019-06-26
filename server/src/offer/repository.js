@@ -70,11 +70,9 @@ export default class OfferRepository {
   async where({ where, limit, productNr, order }) {
     // First we want to resolve all the vendors.
     let vendorQuery = db("vendor").select("nr");
-    const { vendor, AND, OR, NOT } = where;
+    const { vendor, AND } = where;
     if (vendor) vendorQuery = this.resolveVendorField(vendorQuery, vendor);
     if (AND) vendorQuery = this.resolveAndField(vendorQuery, AND);
-    if (OR) vendorQuery = this.resolveOrField(vendorQuery, OR);
-    // TODO: NOT - maybe not
 
     let query = db("offer").where("vendor", "in", vendorQuery);
     if (productNr) query.andWhere("product", productNr);
@@ -92,40 +90,25 @@ export default class OfferRepository {
 
   resolveAndField(query, andInput) {
     andInput.forEach(({ vendor }) => {
-      query = this.resolveVendorField(query, vendor, "and");
+      query = this.resolveVendorField(query, vendor);
     });
     return query;
   }
 
-  resolveOrField(query, orInput) {
-    orInput.forEach(({ vendor }) => {
-      query = this.resolveVendorField(query, vendor, "or");
-    });
-    return query;
-  }
-
-  resolveVendorField(query, vendorInput, operator) {
+  resolveVendorField(query, vendorInput) {
     const { nr, comment, publishDate } = vendorInput;
     if (nr) {
-      switch (operator) {
-        // no need to have a case for "and"
-        // since it is used on all cases where
-        // operator is not defined
-        case "or":
-          return query.orWhere({ nr });
-        default:
-          return query.andWhere({ nr });
-      }
+      return query.andWhere({ nr });
     }
     if (comment) {
-      return this.resolveVendorCommentField(query, comment, operator);
+      return this.resolveVendorCommentField(query, comment);
     }
     if (publishDate) {
-      return this.resolveVendorPublishDateField(query, publishDate, operator);
+      return this.resolveVendorPublishDateField(query, publishDate);
     }
   }
 
-  resolveVendorCommentField(query, comment, operator) {
+  resolveVendorCommentField(query, comment) {
     const { criterion, pattern } = comment;
     let matchPattern;
     switch (criterion) {
@@ -142,17 +125,10 @@ export default class OfferRepository {
         matchPattern = `${pattern}`;
         break;
     }
-    switch (operator) {
-      case "and":
-        return query.andWhere("comment", "like", matchPattern);
-      case "or":
-        return query.orWhere("comment", "like", matchPattern);
-      default:
-        return query.where("comment", "like", matchPattern);
-    }
+    return query.andWhere("comment", "like", matchPattern);
   }
 
-  resolveVendorPublishDateField(query, publishDate, operator) {
+  resolveVendorPublishDateField(query, publishDate) {
     const { criterion, date } = publishDate;
     let dateEquality;
     switch (criterion) {
@@ -163,11 +139,6 @@ export default class OfferRepository {
       case "EQUALS":
         dateEquality = "=";
     }
-    switch (operator) {
-      case "AND":
-        return query.andWhere("publishDate", dateEquality, date);
-      case "OR":
-        return query.orWhere("publishDate", dateEquality, date);
-    }
+    return query.andWhere("publishDate", dateEquality, date);
   }
 }

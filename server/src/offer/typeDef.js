@@ -32,8 +32,6 @@ export default gql`
 
   input OfferWhereInput {
     AND: [OfferWhereInput!]
-    NOT: OfferWhereInput
-    OR: [OfferWhereInput]
     vendor: VendorFieldInput
   }
 
