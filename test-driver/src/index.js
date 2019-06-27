@@ -1,16 +1,16 @@
 import cluster from "cluster";
 import os from "os";
 import { join } from "path";
-import { lstatSync, readdirSync, readFileSync } from "fs";
+import fs, { mkdir, writeFile, lstatSync, readdirSync, readFileSync } from "fs";
 import program from "commander";
 import { request } from "graphql-request";
 import prettyjson from "prettyjson";
 import traverse from "traverse";
 import _ from "lodash";
+import { Parser } from "json2csv";
 
 if (cluster.isMaster) {
   // MASTER
-
   program
     .version("0.0.1", "-v, --version")
     .option("-a, --actual-queries <path>", "Path to actualQueries folder.")
@@ -52,12 +52,13 @@ if (cluster.isMaster) {
     let queryTemplate = dirPath.split("/").pop();
     let queryTemplateNumber = queryTemplate.split("_").pop();
 
-    const unChunkedQueries = queryPaths.map(path =>
-      readFileSync(path, "utf-8", (err, data) => {
+    const unChunkedQueries = queryPaths.map((path, index) => {
+      const data = readFileSync(path, "utf-8", (err, data) => {
         if (err) throw err;
         return data;
-      })
-    );
+      });
+      return { index: index + 1, data };
+    });
 
     const chunkedQueries = _.chunk(
       unChunkedQueries,
@@ -78,14 +79,44 @@ if (cluster.isMaster) {
     cluster.fork();
   }
 
+  let collectedData = [];
+
   cluster.on("exit", (worker, code, signal) => {
     console.log(`worker ${worker.process.pid} died`);
+
+    if (Object.keys(cluster.workers).length === 0) {
+      // Time to convert data to some csv
+      console.log("All workers are done.");
+      const fields = [
+        { label: "Query Template", value: "queryTemplate" },
+        { label: "Query Number", value: "queryNumber" },
+        { label: "Time (ms)", value: "timeMs" },
+        { label: "Leaf nodes", value: "leafNodes" },
+        { label: "Error", value: "error" }
+      ];
+      const json2csvParser = new Parser({ fields });
+      const csv = json2csvParser.parse(collectedData);
+      // Create output dir if it doesn't exist
+      if (!fs.existsSync("output")) fs.mkdirSync("output");
+      // Write to file
+      writeFile(
+        `output/test-${new Date().toISOString()}.csv`,
+        csv,
+        { encoding: "utf-8" },
+        err => {
+          if (err) throw err;
+          console.log("Output has been saved, exiting");
+          process.exit();
+        }
+      );
+    }
   });
 
   cluster.on("message", (worker, { command, data }, handle) => {
     switch (command) {
       case "LOGDATA":
         console.log(`worker ${worker.id}:`, data);
+        collectedData.push(data);
     }
   });
 
@@ -123,30 +154,46 @@ if (cluster.isMaster) {
 
   const start = async SERVER_URL => {
     await asyncForEach(queryTemplates, async ({ queryTemplate, queries }) => {
-      await asyncForEach(queries, async (query, index) => {
+      await asyncForEach(queries, async ({ index, data }) => {
         try {
           let startTime = process.hrtime();
-          const response = await request(SERVER_URL, query);
+          const response = await request(SERVER_URL, data);
           let endTime = process.hrtime(startTime);
           let leaves = traverse(response).reduce(function(acc, x) {
             if (this.isLeaf) acc.push(x);
             return acc;
           }, []);
+          let totalTime = endTime[0] * 1000 + endTime[1] / 1000000;
+          totalTime = Math.round((totalTime * 100) / 100);
           // Send data about the sent query up to the master.
           process.send({
             command: "LOGDATA",
             data: {
               queryTemplate,
-              timeMs: endTime[0] * 1000 + endTime[1] / 1000000,
-              leafNodes: leaves.length
+              queryNumber: index,
+              timeMs: totalTime,
+              leafNodes: leaves.length,
+              error: 0
             }
           });
           // console.log(response);
         } catch (err) {
           console.log("ERROR - EXITING");
-          console.log("QUERY:", query);
+          console.log("QUERY:", data);
           console.log(prettyjson.render(err));
-          process.exit(1);
+          // process.exit(1);
+
+          // Send up information anyway
+          process.send({
+            command: "LOGDATA",
+            data: {
+              queryTemplate,
+              queryNumber: index,
+              timeMs: -1,
+              leafNodes: -1,
+              error: 1
+            }
+          });
         }
       });
     });
