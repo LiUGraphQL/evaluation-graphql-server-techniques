@@ -1,10 +1,23 @@
 import Product from "./model";
 import db from "../database";
 import { getGeneric, allGeneric } from "../helpers";
+import DataLoader from "dataloader";
+import { cache } from "../helpers";
+
+const getProductByNr = nrs => {
+  let query = db
+    .select()
+    .from("product")
+    .whereIn("nr", nrs);
+
+  return query.then(response => response.map(product => new Product(product)));
+};
+
+export const productByNrLoader = new DataLoader(getProductByNr, { cache });
 
 export default class ProductRepository {
   async get(nr) {
-    return getGeneric(nr, Product, "product");
+    return productByNrLoader.load(nr);
   }
 
   async all() {

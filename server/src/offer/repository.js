@@ -1,10 +1,23 @@
 import Offer from "./model";
 import db from "../database";
 import { getGeneric, allGeneric } from "../helpers";
+import DataLoader from "dataloader";
+import { cache } from "../helpers";
+
+const getOffersByNr = nrs => {
+  let query = db
+    .select()
+    .from("offer")
+    .whereIn("nr", nrs);
+
+  return query.then(response => response.map(offer => new Offer(offer)));
+};
+
+export const offersByIdLoader = new DataLoader(getOffersByNr, { cache });
 
 export default class OfferRepository {
   async get(nr) {
-    return getGeneric(nr, Offer, "offer");
+    return offersByIdLoader.load(nr);
   }
 
   async all() {
