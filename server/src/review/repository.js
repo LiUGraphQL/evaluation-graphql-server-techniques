@@ -1,17 +1,8 @@
 import Review from "./model";
 import db from "../database";
-import { getGeneric, allGeneric } from "../helpers";
+import { simpleSortRows, allGeneric } from "../helpers";
 import DataLoader from "dataloader";
-import { cache } from "../helpers";
-
-const sortRows = (rows, nrs, model) => {
-  return nrs.map(
-    nr =>
-      new model(
-        rows.find(row => row.nr === nr || new Error(`Row not found: ${nr}`))
-      )
-  );
-};
+import { cache } from "../config";
 
 const getReviewByNr = nrs => {
   let query = db
@@ -20,7 +11,7 @@ const getReviewByNr = nrs => {
     .whereIn("nr", nrs);
 
   // ensure response has rows in correct order
-  return query.then(rows => sortRows(rows, nrs, Review));
+  return query.then(rows => simpleSortRows(rows, nrs, Review));
 };
 
 const getReviewByProductNr = nrs => {
@@ -29,35 +20,36 @@ const getReviewByProductNr = nrs => {
     .from("review")
     .whereIn("product", nrs);
 
-  return query.then(rows => {
-    return nrs.map(nr =>
-      rows
-        .filter(row => row.product === nr)
-        .map(row => {
-          return new Review(row);
-        })
-    );
-  });
+  // A loader needs to return items in the correct order, this sorts them.
+  return query.then(rows =>
+    nrs.map(nr =>
+      rows.filter(row => row.product === nr).map(row => new Review(row))
+    )
+  );
 };
 
-export const reviewByNrLoader = new DataLoader(getReviewByNr, { cache });
-export const reviewByProductNrLoader = new DataLoader(getReviewByProductNr, {
-  cache
-});
-
 export default class ReviewRepository {
+  reviewByNrLoader = new DataLoader(getReviewByNr, { cache });
+  reviewByProductNrLoader = new DataLoader(getReviewByProductNr, {
+    cache
+  });
+
+  // ! DATALOADED
   async get(nr) {
-    return reviewByNrLoader.load(nr);
+    return this.reviewByNrLoader.load(nr);
   }
 
+  // ? DONT DATALOAD - Not used by query templates
   async all() {
     return allGeneric(Review, "review");
   }
 
+  // ! DATALOADED
   async sortBy({ productId, field, direction }) {
-    let reviews = await reviewByProductNrLoader.load(productId);
+    let reviews = await this.reviewByProductNrLoader.load(productId);
+    // Update the reviewByNrLoader cache
     reviews.forEach(review =>
-      reviewByNrLoader.prime(review.nr, new Review(review))
+      this.reviewByNrLoader.prime(review.nr, new Review(review))
     );
 
     const sortByField = (field, direction) => {
@@ -80,6 +72,7 @@ export default class ReviewRepository {
     return reviews;
   }
 
+  // TODO: Can I DataLoad this? Its very sql-specific.
   async search({ field, criterion, pattern }) {
     let query = db("review");
     let matchPattern;

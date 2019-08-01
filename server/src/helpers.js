@@ -15,3 +15,9 @@ export const allGeneric = async (model, databaseTable) => {
     .from(databaseTable)
     .then(response => response.map(raw => new model(raw)));
 };
+
+export const simpleSortRows = (rows, nrs, model) => {
+  return nrs.map(nr => {
+    return new model(rows.find(row => row.nr === nr));
+  });
+};

@@ -1,41 +1,59 @@
 import ProductFeature from "./model";
+import { model as ProductFeatureProduct } from "../productFeatureProduct";
 import db from "../database";
-import { getGeneric, allGeneric } from "../helpers";
+import DataLoader from "dataloader";
+import { simpleSortRows, allGeneric } from "../helpers";
+import { cache } from "../config";
+
+const getProductFeatureByNr = nrs => {
+  let query = db
+    .select()
+    .from("productfeature")
+    .whereIn("nr", nrs);
+
+  // ensure response has rows in correct order
+  return query.then(rows => simpleSortRows(rows, nrs, ProductFeature));
+};
+
+const getProductFeatureProductByProduct = products => {
+  let query = db
+    .select()
+    .from("productfeatureproduct")
+    .whereIn("product", products);
+
+  // ensure response has rows in correct order
+  return query.then(rows =>
+    products.map(nr =>
+      rows
+        .filter(row => row.product === nr)
+        .map(row => new ProductFeatureProduct(row))
+    )
+  );
+};
 
 export default class ProductFeatureRepository {
+  productFeatureByNrLoader = new DataLoader(getProductFeatureByNr, { cache });
+  productFeatureProductByProductLoader = new DataLoader(
+    getProductFeatureProductByProduct,
+    { cache }
+  );
+
+  // ! DATALOADED
   async get(nr) {
-    if (typeof nr !== "undefined" && nr !== null) {
-      return getGeneric(nr, ProductFeature, "productfeature");
-    }
-    return null;
+    return this.productFeatureByNrLoader.load(nr);
   }
 
   async all() {
     return allGeneric(ProductFeature, "productfeature");
   }
 
+  // ! DATALOADED
   async findBy({ product }) {
-    if (typeof product !== "undefined" && product !== null) {
-      return db
-        .select("productfeature")
-        .from("productfeatureproduct")
-        .where("product", product)
-        .then(response => {
-          const productFeatureNrs = response.map(
-            productFeatureProduct => productFeatureProduct.productfeature
-          );
-          return db
-            .select()
-            .from("productfeature")
-            .where("nr", "in", productFeatureNrs)
-            .then(productFeatures =>
-              productFeatures.map(
-                productFeature => new ProductFeature(productFeature)
-              )
-            );
-        });
-    } else {
-      throw Error("Required argument is invalid");
-    }
+    const productFeatureProducts = await this.productFeatureProductByProductLoader.load(
+      product
+    );
+    return this.productFeatureByNrLoader.loadMany(
+      productFeatureProducts.map(pfp => pfp.productFeature)
+    );
   }
 }

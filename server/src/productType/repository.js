@@ -1,36 +1,53 @@
 import ProductType from "./model";
+import { model as ProductTypeProduct } from "../productTypeProduct";
 import db from "../database";
-import { getGeneric, allGeneric } from "../helpers";
+import DataLoader from "dataloader";
+import { simpleSortRows, allGeneric } from "../helpers";
+import { cache } from "../config";
+
+const getProductTypeByNr = nrs => {
+  let query = db
+    .select()
+    .from("producttype")
+    .whereIn("nr", nrs);
+
+  // ensure response has rows in correct order
+  return query.then(rows => simpleSortRows(rows, nrs, ProductType));
+};
+
+const getProductTypeProductByProduct = products => {
+  let query = db
+    .select()
+    .from("producttypeproduct")
+    .whereIn("product", products);
+
+  // ensure response has rows in correct order
+  return query.then(rows => simpleSortRows(rows, products, ProductTypeProduct));
+};
 
 export default class ProductTypeRepository {
-  async get(nr) {
-    if (typeof nr !== "undefined" && nr !== null) {
-      return getGeneric(nr, ProductType, "producttype");
+  productTypeByNrLoader = new DataLoader(getProductTypeByNr, { cache });
+  productTypeProductByProductLoader = new DataLoader(
+    getProductTypeProductByProduct,
+    {
+      cache
     }
-    return null;
+  );
+
+  // ! DATALOADED
+  async get(nr) {
+    return this.productTypeByNrLoader.load(nr);
   }
 
   async all() {
     return allGeneric(ProductType, "producttype");
   }
 
+  // ! DATALOADED
   async findBy({ product }) {
-    if (typeof product !== "undefined" && product !== null) {
-      return db
-        .select("producttype")
-        .from("producttypeproduct")
-        .where("product", product)
-        .first()
-        .then(response => {
-          return db
-            .select()
-            .from("producttype")
-            .where("nr", response.producttype)
-            .first()
-            .then(productType => new ProductType(productType));
-        });
-    } else {
-      throw Error("Required argument is invalid.");
-    }
+    const productTypeProduct = await this.productTypeProductByProductLoader.load(
+      product
+    );
+    return this.productTypeByNrLoader.load(productTypeProduct.productType);
   }
 }

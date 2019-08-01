@@ -1,8 +1,10 @@
 import Product from "./model";
+import { model as ProductTypeProduct } from "../productTypeProduct";
+import { model as ProductFeatureProduct } from "../productFeatureProduct";
 import db from "../database";
-import { getGeneric, allGeneric } from "../helpers";
+import { simpleSortRows, allGeneric } from "../helpers";
 import DataLoader from "dataloader";
-import { cache } from "../helpers";
+import { cache } from "../config";
 
 const getProductByNr = nrs => {
   let query = db
@@ -10,12 +12,69 @@ const getProductByNr = nrs => {
     .from("product")
     .whereIn("nr", nrs);
 
-  return query.then(response => response.map(product => new Product(product)));
+  return query.then(rows => simpleSortRows(rows, nrs, Product));
 };
 
-export const productByNrLoader = new DataLoader(getProductByNr, { cache });
+const getProductsByProducerNr = producerNrs => {
+  let query = db
+    .select()
+    .from("product")
+    .whereIn("producer", producerNrs);
+
+  return query.then(rows =>
+    producerNrs.map(nr =>
+      rows.filter(row => row.producer === nr).map(row => new Product(row))
+    )
+  );
+};
+
+const getProductTypeProductByProductType = productTypes => {
+  let query = db
+    .select()
+    .from("producttypeproduct")
+    .whereIn("producttype", productTypes);
+
+  return query.then(rows =>
+    productTypes.map(nr =>
+      rows
+        .filter(row => row.productType === nr)
+        .map(row => new ProductTypeProduct(row))
+    )
+  );
+};
+
+const getProductFeatureProductByProductFeature = productFeatures => {
+  let query = db
+    .select()
+    .from("productfeatureproduct")
+    .whereIn("productfeature", productFeatures);
+
+  return query.then(rows =>
+    productFeatures.map(nr =>
+      rows
+        .filter(row => row.productFeature === nr)
+        .map(row => new ProductFeatureProduct(row))
+    )
+  );
+};
 
 export default class ProductRepository {
+  productByNrLoader = new DataLoader(getProductByNr, { cache });
+  productByProducerNrLoader = new DataLoader(getProductsByProducerNr, {
+    cache
+  });
+  productTypeProductByProductTypeLoader = new DataLoader(
+    getProductTypeProductByProductType,
+    {
+      cache
+    }
+  );
+  productFeatureProductByProductFeatureLoader = new DataLoader(
+    getProductFeatureProductByProductFeature,
+    { cache }
+  );
+
+  // ! DATALOADED
   async get(nr) {
     return productByNrLoader.load(nr);
   }
@@ -24,44 +83,30 @@ export default class ProductRepository {
     return allGeneric(Product, "product");
   }
 
+  // ! DATALOADED
+  // TODO TEST
   async findBy({ producerNr, productType, productFeature }) {
-    if (typeof producerNr !== "undefined" && producerNr !== null) {
-      return db("product")
-        .where({ producer: producerNr })
-        .then(products => products.map(product => new Product(product)));
-    } else if (typeof productType !== "undefined" && productType !== null) {
-      return db
-        .select("product")
-        .from("producttypeproduct")
-        .where("producttype", productType)
-        .then(response => {
-          const productNrs = response.map(
-            productTypeProduct => productTypeProduct.product
-          );
-          return db
-            .select()
-            .from("product")
-            .where("nr", "in", productNrs)
-            .then(products => products.map(product => new Product(product)));
-        });
-    } else if (
-      typeof productFeature !== "undefined" &&
-      productFeature !== null
-    ) {
-      return db
-        .select("product")
-        .from("productfeatureproduct")
-        .where("productfeature", productFeature)
-        .then(response => {
-          const productNrs = response.map(
-            productFeatureProduct => productFeatureProduct.product
-          );
-          return db
-            .select()
-            .from("product")
-            .where("nr", "in", productNrs)
-            .then(products => products.map(product => new Product(product)));
-        });
+    if (producerNr) {
+      const products = await this.productByProducerNrLoader.load(producerNr);
+      // Update nr cache with retreived products
+      products.map(product =>
+        this.productByNrLoader.prime(product.nr, product)
+      );
+      return products;
+    } else if (productType) {
+      let productTypeProducts = await this.productTypeProductByProductTypeLoader.load(
+        productType
+      );
+      return this.productByNrLoader.loadMany(
+        productTypeProducts.map(ptp => ptp.product)
+      );
+    } else if (productFeature) {
+      let productFeatureProducts = await this.productFeatureProductByProductFeatureLoader.load(
+        productFeature
+      );
+      return this.productByNrLoader.loadMany(
+        productFeatureProducts.map(pfp => pfp.product)
+      );
     } else {
       throw Error;
     }

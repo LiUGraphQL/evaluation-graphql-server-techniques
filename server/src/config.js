@@ -1,3 +1,3 @@
-const cache = false;
+const cache = true;
 
 export { cache };
