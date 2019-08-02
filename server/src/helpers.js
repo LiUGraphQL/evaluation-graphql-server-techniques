@@ -18,6 +18,6 @@ export const allGeneric = async (model, databaseTable) => {
 
 export const simpleSortRows = (rows, nrs, model) => {
   return nrs.map(nr => {
-    return new model(rows.find(row => row.nr === nr));
+    return new model(rows.find(row => row.nr == nr));
   });
 };

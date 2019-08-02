@@ -1,10 +1,23 @@
 import Producer from "./model";
 import db from "../database";
-import { getGeneric, allGeneric } from "../helpers";
+import { simpleSortRows, allGeneric } from "../helpers";
+import DataLoader from "dataloader";
+import { cache } from "../config";
+
+const getProducerByNrs = nrs => {
+  let query = db
+    .select()
+    .from("producer")
+    .whereIn("nr", nrs);
+
+  return query.then(rows => simpleSortRows(rows, nrs, Producer));
+};
 
 export default class ProducerRepository {
+  producerByNrLoader = new DataLoader(getProducerByNrs, { cache });
+
   async get(nr) {
-    return getGeneric(nr, Producer, "producer");
+    return this.producerByNrLoader.load(nr);
   }
 
   async all() {

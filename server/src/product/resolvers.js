@@ -27,7 +27,10 @@ export default {
       });
     },
     offers: ({ nr }, { where }, { repository }) => {
-      return repository.offer.productOffers({ where, productNr: nr });
+      return repository.offer.productOffers(
+        { where, productNr: nr },
+        repository
+      );
     }
   }
 };

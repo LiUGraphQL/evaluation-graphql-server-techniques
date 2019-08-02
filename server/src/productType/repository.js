@@ -15,20 +15,24 @@ const getProductTypeByNr = nrs => {
   return query.then(rows => simpleSortRows(rows, nrs, ProductType));
 };
 
-const getProductTypeProductByProduct = products => {
+const getProductTypeProductByProductNr = productNrs => {
   let query = db
     .select()
     .from("producttypeproduct")
-    .whereIn("product", products);
+    .whereIn("product", productNrs);
 
   // ensure response has rows in correct order
-  return query.then(rows => simpleSortRows(rows, products, ProductTypeProduct));
+  return query.then(rows =>
+    productNrs.map(
+      nr => new ProductTypeProduct(rows.find(row => row.product === nr))
+    )
+  );
 };
 
 export default class ProductTypeRepository {
   productTypeByNrLoader = new DataLoader(getProductTypeByNr, { cache });
   productTypeProductByProductLoader = new DataLoader(
-    getProductTypeProductByProduct,
+    getProductTypeProductByProductNr,
     {
       cache
     }

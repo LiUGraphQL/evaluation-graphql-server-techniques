@@ -76,7 +76,7 @@ export default class ProductRepository {
 
   // ! DATALOADED
   async get(nr) {
-    return productByNrLoader.load(nr);
+    return this.productByNrLoader.load(nr);
   }
 
   async all() {
@@ -84,7 +84,6 @@ export default class ProductRepository {
   }
 
   // ! DATALOADED
-  // TODO TEST
   async findBy({ producerNr, productType, productFeature }) {
     if (producerNr) {
       const products = await this.productByProducerNrLoader.load(producerNr);
@@ -108,7 +107,7 @@ export default class ProductRepository {
         productFeatureProducts.map(pfp => pfp.product)
       );
     } else {
-      throw Error;
+      throw Error("Missing argument.");
     }
   }
 }

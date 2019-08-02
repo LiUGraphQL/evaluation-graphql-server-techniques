@@ -1,101 +1,84 @@
+import _ from "lodash";
+import DataLoader from "dataloader";
 import Offer from "./model";
 import db from "../database";
-import { getGeneric, allGeneric } from "../helpers";
-import DataLoader from "dataloader";
+import { simpleSortRows, allGeneric } from "../helpers";
 import { cache } from "../helpers";
 
-const getOffersByNr = nrs => {
+const getOfferByNrs = nrs => {
   let query = db
     .select()
     .from("offer")
     .whereIn("nr", nrs);
 
-  return query.then(response => response.map(offer => new Offer(offer)));
+  return query.then(rows => simpleSortRows(rows, nrs, Offer));
 };
 
-export const offersByIdLoader = new DataLoader(getOffersByNr, { cache });
+const getOfferByVendorNr = vendorNrs => {
+  let query = db
+    .select()
+    .from("offer")
+    .whereIn("vendor", vendorNrs);
+
+  return query.then(rows =>
+    vendorNrs.map(nr =>
+      rows.filter(row => row.vendor === nr).map(row => new Offer(row))
+    )
+  );
+};
 
 export default class OfferRepository {
+  offerByNrLoader = new DataLoader(getOfferByNrs, { cache });
+  offerByVendorNrLoader = new DataLoader(getOfferByVendorNr, { cache });
+
+  // ! DATALOADED
   async get(nr) {
-    return offersByIdLoader.load(nr);
+    return this.offerByNrLoader.load(nr);
   }
 
   async all() {
     return allGeneric(Offer, "offer");
   }
 
-  async findBy({ nr: vendorNr, limit, offset }) {
-    let query = db
-      .select()
-      .from("offer")
-      .where({ vendor: vendorNr });
-    if (limit) query.limit(limit);
-    if (offset) query.offset(offset);
+  // ! DATALOADED
+  async findByVendor({ nr, offset, limit }) {
+    let offers = this.offerByVendorNrLoader.load(nr);
 
-    return query.then(response => response.map(offer => new Offer(offer)));
+    offers = offset ? offers.slice(offset) : offers;
+    offers = limit ? offers.slice(0, limit) : offers;
+
+    return offers;
   }
 
-  async countBy({ nr: vendorId }) {
-    let query = db("offer")
-      .count("nr as count")
-      .where({ vendor: vendorId });
-    return query.then(([response]) => response.count);
+  async offers({ where, limit, order }, repos) {
+    let offers = await this.where(where, repos);
+
+    offers = limit ? offers.slice(0, limit) : offers;
+    offers = order ? _.orderBy(offers, order) : offers;
+
+    return offers;
   }
 
-  async avgBy({ nr: vendorId }) {
-    let query = db("offer")
-      .avg({ avg: "price" })
-      .where({ vendor: vendorId });
-    return query.then(([response]) => response.avg);
+  async productOffers({ where, productNr }, repos) {
+    let offers = await this.where(where, repos);
+    return offers.filter(offer => offer.product == productNr);
   }
 
-  async sumBy({ nr: vendorId }) {
-    let query = db("offer")
-      .sum("price as sum")
-      .where({ vendor: vendorId });
-    return query.then(([response]) => response.sum);
-  }
+  async where(where, repos) {
+    let vendors = await repos.vendor.all();
 
-  async maxBy({ nr: vendorId }) {
-    let query = db("offer")
-      .max("price as max")
-      .where({ vendor: vendorId })
-      .from("offer");
-    return query.then(([response]) => response.max);
-  }
+    const { vendor: vendorArg, AND } = where || {};
 
-  async minBy({ nr: vendorId }) {
-    let query = db("offer")
-      .min("price as min")
-      .where({ vendor: vendorId })
-      .from("offer");
-    return query.then(([response]) => response.min);
-  }
+    if (vendorArg) {
+      vendors = this.resolveVendorField(vendors, vendorArg);
+    } else if (AND) {
+      AND.forEach(({ vendor: vendorArg }) => {
+        vendors = this.resolveVendorField(vendors, vendorArg);
+      });
+    }
+    const vendorNrs = vendors.map(vendor => vendor.nr);
 
-  async offers({ where, limit, order }) {
-    return this.where({ where, limit, order });
-  }
-
-  async productOffers({ productNr, where }) {
-    return this.where({ where, productNr });
-  }
-
-  async where({ where, limit, productNr, order }) {
-    // First we want to resolve all the vendors.
-    let vendorQuery = db("vendor").select("nr");
-    const { vendor, AND } = where || {}; // || {} if where is undefined
-    if (vendor) vendorQuery = this.resolveVendorField(vendorQuery, vendor);
-    if (AND) vendorQuery = this.resolveAndField(vendorQuery, AND);
-
-    let query = db("offer");
-    if (vendor) query.where("vendor", "in", vendorQuery);
-    if (productNr) query.andWhere("product", productNr);
-    if (limit) query.limit(limit);
-    if (order) query.orderBy(order);
-
-    return query.then(response => {
-      return response.map(offer => new Offer(offer));
-    });
+    return this.offerByVendorNrLoader.loadMany(vendorNrs);
   }
 
   resolveAndField(query, andInput) {
@@ -105,53 +88,58 @@ export default class OfferRepository {
     return query;
   }
 
-  resolveVendorField(query, vendorInput) {
-    const { nr, comment, publishDate } = vendorInput;
+  resolveVendorField(vendors, vendorArg) {
+    const { nr, comment, publishDate } = vendorArg;
     if (nr) {
-      return query.andWhere({ nr });
+      vendors = vendors.filter(vendor => vendor.nr == nr);
+    } else if (comment) {
+      vendors = this.resolveVendorCommentField(vendors, comment);
+    } else if (publishDate) {
+      vendors = this.resolveVendorPublishDateField(vendors, publishDate);
     }
-    if (comment) {
-      return this.resolveVendorCommentField(query, comment);
-    }
-    if (publishDate) {
-      return this.resolveVendorPublishDateField(query, publishDate);
-    }
+    return vendors;
   }
 
-  resolveVendorCommentField(query, comment) {
+  resolveVendorCommentField(vendors, comment) {
     const { criterion, pattern } = comment;
-    let matchPattern;
     switch (criterion) {
       case "CONTAINS":
-        matchPattern = `%${pattern}%`;
+        vendors = vendors.filter(vendor => vendor.comment.includes(pattern));
         break;
       case "START_WITH":
-        matchPattern = `${pattern}%`;
+        vendors = vendors.filter(vendor => vendor.comment.startWith(pattern));
         break;
       case "END_WITH":
-        matchPattern = `%${pattern}`;
+        vendors = vendors.filter(vendor => vendor.comment.endsWith(pattern));
         break;
       case "EQUALS":
-        matchPattern = `${pattern}`;
+        vendors = vendors.filter(vendor => vendor.comment === pattern);
         break;
     }
-    return query.andWhere("comment", "like", matchPattern);
+
+    return vendors;
   }
 
-  resolveVendorPublishDateField(query, publishDate) {
+  resolveVendorPublishDateField(vendors, publishDate) {
     const { criterion, date } = publishDate;
-    let dateEquality;
     switch (criterion) {
       case "BEFORE":
-        dateEquality = "<";
+        vendors = vendors.filter(
+          vendor => Date.parse(vendor.publishDate) < Date.parse(date)
+        );
         break;
       case "AFTER":
-        dateEquality = ">";
+        vendors = vendors.filter(
+          vendor => Date.parse(vendor.publishDate) > Date.parse(date)
+        );
         break;
       case "EQUALS":
-        dateEquality = "=";
+        vendors = vendors.filter(
+          vendor => Date.parse(vendor.publishDate) === Date.parse(date)
+        );
         break;
     }
-    return query.andWhere("publishDate", dateEquality, date);
+
+    return vendors;
   }
 }

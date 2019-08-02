@@ -14,15 +14,25 @@ const getVendorByNr = nrs => {
   return query.then(rows => simpleSortRows(rows, nrs, Vendor));
 };
 
+const getAllVendors = keys => {
+  let query = db.select().from("vendor");
+
+  return query.then(rows => rows.map(row => new Vendor(row)));
+};
+
 export default class VendorRepository {
   vendorByNrLoader = new DataLoader(getVendorByNr, { cache });
+  allVendorLoader = new DataLoader(getAllVendors, { cache });
 
   // ! DATALOADED
   async get(nr) {
     return this.vendorByNrLoader.load(nr);
   }
 
+  // ! DATALOADED
   async all() {
-    return allGeneric(Vendor, "vendor");
+    let vendors = await this.allVendorLoader.load("all");
+    vendors.forEach(vendor => this.vendorByNrLoader.prime(vendor.nr, vendor));
+    return vendors;
   }
 }

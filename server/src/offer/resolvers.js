@@ -4,7 +4,7 @@ export default {
       return repository.offer.get(nr);
     },
     offers: (root, { where, limit, order }, { repository }) => {
-      return repository.offer.offers({ where, limit, order });
+      return repository.offer.offers({ where, limit, order }, repository);
     }
   },
   Offer: {

@@ -9,7 +9,7 @@ export default {
   },
   Vendor: {
     offers: ({ nr }, { limit, offset }, { repository }) => {
-      return repository.offer.findBy({ nr, limit, offset });
+      return repository.offer.findByVendor({ nr, limit, offset });
     },
     offersConnection: ({ nr: productNr }) => {
       return productNr;
