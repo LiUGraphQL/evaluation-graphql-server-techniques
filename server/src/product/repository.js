@@ -1,4 +1,5 @@
 import Product from "./model";
+import _ from "lodash";
 import { model as ProductTypeProduct } from "../productTypeProduct";
 import { model as ProductFeatureProduct } from "../productFeatureProduct";
 import db from "../database";
@@ -7,19 +8,23 @@ import DataLoader from "dataloader";
 import { cache } from "../config";
 
 const getProductByNr = nrs => {
+  const uniqueNrs = _.uniq(nrs);
   let query = db
     .select()
     .from("product")
-    .whereIn("nr", nrs);
+    .whereIn("nr", uniqueNrs);
 
-  return query.then(rows => simpleSortRows(rows, nrs, Product));
+  return query.then(rows => {
+    return simpleSortRows(rows, nrs, Product);
+  });
 };
 
 const getProductsByProducerNr = producerNrs => {
+  const uniqueNrs = _.uniq(producerNrs);
   let query = db
     .select()
     .from("product")
-    .whereIn("producer", producerNrs);
+    .whereIn("producer", uniqueNrs);
 
   return query.then(rows =>
     producerNrs.map(nr =>
@@ -29,10 +34,11 @@ const getProductsByProducerNr = producerNrs => {
 };
 
 const getProductTypeProductByProductType = productTypes => {
+  const uniqueNrs = _.uniq(productTypes);
   let query = db
     .select()
     .from("producttypeproduct")
-    .whereIn("producttype", productTypes);
+    .whereIn("producttype", uniqueNrs);
 
   return query.then(rows =>
     productTypes.map(nr =>
@@ -44,10 +50,11 @@ const getProductTypeProductByProductType = productTypes => {
 };
 
 const getProductFeatureProductByProductFeature = productFeatures => {
+  const uniqueNrs = _.uniq(productFeatures);
   let query = db
     .select()
     .from("productfeatureproduct")
-    .whereIn("productfeature", productFeatures);
+    .whereIn("productfeature", uniqueNrs);
 
   return query.then(rows =>
     productFeatures.map(nr =>

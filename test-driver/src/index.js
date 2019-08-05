@@ -181,7 +181,7 @@ if (cluster.isMaster) {
           console.log("ERROR - EXITING");
           console.log("QUERY:", data);
           console.log(prettyjson.render(err));
-          // process.exit(1);
+          process.exit(1);
 
           // Send up information anyway
           process.send({

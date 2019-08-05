@@ -1,7 +1,7 @@
 export default {
   Query: {
     productFeature: (root, { nr }, { repository }) => {
-      return repository.productFeature.get(nr);
+      return repository.productFeature.get(praseInt(nr));
     },
     productFeatures: (root, _, { repository }) => {
       return repository.productFeature.all();

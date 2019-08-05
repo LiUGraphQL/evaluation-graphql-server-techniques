@@ -1,7 +1,7 @@
 export default {
   Query: {
     vendor: (root, { nr }, { repository }) => {
-      return repository.vendor.get(nr);
+      return repository.vendor.get(parseInt(nr));
     },
     vendors: (root, _, { repository }) => {
       return repository.vendor.all();
@@ -11,8 +11,8 @@ export default {
     offers: ({ nr }, { limit, offset }, { repository }) => {
       return repository.offer.findByVendor({ nr, limit, offset });
     },
-    offersConnection: ({ nr: productNr }) => {
-      return productNr;
+    offersConnection: ({ nr: vendorNr }) => {
+      return vendorNr;
     }
   }
 };

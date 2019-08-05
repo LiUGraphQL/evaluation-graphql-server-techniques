@@ -1,14 +1,16 @@
 import Producer from "./model";
+import _ from "lodash";
 import db from "../database";
 import { simpleSortRows, allGeneric } from "../helpers";
 import DataLoader from "dataloader";
 import { cache } from "../config";
 
 const getProducerByNrs = nrs => {
+  const uniqueNrs = _.uniq(nrs);
   let query = db
     .select()
     .from("producer")
-    .whereIn("nr", nrs);
+    .whereIn("nr", uniqueNrs);
 
   return query.then(rows => simpleSortRows(rows, nrs, Producer));
 };

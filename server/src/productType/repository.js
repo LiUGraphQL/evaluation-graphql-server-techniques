@@ -1,3 +1,4 @@
+import _ from "lodash";
 import ProductType from "./model";
 import { model as ProductTypeProduct } from "../productTypeProduct";
 import db from "../database";
@@ -6,20 +7,22 @@ import { simpleSortRows, allGeneric } from "../helpers";
 import { cache } from "../config";
 
 const getProductTypeByNr = nrs => {
+  const uniqueNrs = _.uniq(nrs);
   let query = db
     .select()
     .from("producttype")
-    .whereIn("nr", nrs);
+    .whereIn("nr", uniqueNrs);
 
   // ensure response has rows in correct order
   return query.then(rows => simpleSortRows(rows, nrs, ProductType));
 };
 
 const getProductTypeProductByProductNr = productNrs => {
+  const uniqueNrs = _.uniq(productNrs);
   let query = db
     .select()
     .from("producttypeproduct")
-    .whereIn("product", productNrs);
+    .whereIn("product", uniqueNrs);
 
   // ensure response has rows in correct order
   return query.then(rows =>

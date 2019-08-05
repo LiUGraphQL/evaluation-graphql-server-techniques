@@ -1,3 +1,4 @@
+import _ from "lodash";
 import ProductFeature from "./model";
 import { model as ProductFeatureProduct } from "../productFeatureProduct";
 import db from "../database";
@@ -6,20 +7,22 @@ import { simpleSortRows, allGeneric } from "../helpers";
 import { cache } from "../config";
 
 const getProductFeatureByNr = nrs => {
+  const uniqueNrs = _.uniq(nrs);
   let query = db
     .select()
     .from("productfeature")
-    .whereIn("nr", nrs);
+    .whereIn("nr", uniqueNrs);
 
   // ensure response has rows in correct order
   return query.then(rows => simpleSortRows(rows, nrs, ProductFeature));
 };
 
 const getProductFeatureProductByProduct = products => {
+  const uniqueNrs = _.uniq(products);
   let query = db
     .select()
     .from("productfeatureproduct")
-    .whereIn("product", products);
+    .whereIn("product", uniqueNrs);
 
   // ensure response has rows in correct order
   return query.then(rows =>

@@ -1,3 +1,4 @@
+import _ from "lodash";
 import Review from "./model";
 import db from "../database";
 import { simpleSortRows, allGeneric } from "../helpers";
@@ -5,20 +6,22 @@ import DataLoader from "dataloader";
 import { cache } from "../config";
 
 const getReviewByNr = nrs => {
+  const uniqueNrs = _.uniq(nrs);
   let query = db
     .select()
     .from("review")
-    .whereIn("nr", nrs);
+    .whereIn("nr", uniqueNrs);
 
   // ensure response has rows in correct order
   return query.then(rows => simpleSortRows(rows, nrs, Review));
 };
 
 const getReviewByProductNr = nrs => {
+  const uniqueNrs = _.uniq(nrs);
   let query = db
     .select()
     .from("review")
-    .whereIn("product", nrs);
+    .whereIn("product", uniqueNrs);
 
   // A loader needs to return items in the correct order, this sorts them.
   return query.then(rows =>
@@ -28,20 +31,29 @@ const getReviewByProductNr = nrs => {
   );
 };
 
+const getAllReviews = keys => {
+  let query = db.select().from("review");
+
+  return query.then(rows => [rows.map(row => new Review(row))]);
+};
+
 export default class ReviewRepository {
   reviewByNrLoader = new DataLoader(getReviewByNr, { cache });
   reviewByProductNrLoader = new DataLoader(getReviewByProductNr, {
     cache
   });
+  allReviewLoader = new DataLoader(getAllReviews, { cache });
 
   // ! DATALOADED
   async get(nr) {
     return this.reviewByNrLoader.load(nr);
   }
 
-  // ? DONT DATALOAD - Not used by query templates
+  // ! DATALOADED
   async all() {
-    return allGeneric(Review, "review");
+    let reviews = await this.allReviewLoader.load("all");
+    reviews.forEach(review => this.reviewByNrLoader.prime(review.nr, review));
+    return reviews;
   }
 
   // ! DATALOADED
@@ -72,25 +84,25 @@ export default class ReviewRepository {
     return reviews;
   }
 
-  // TODO: Can I DataLoad this? Its very sql-specific.
+  // ! DATALOADED - tho it retrieves all
   async search({ field, criterion, pattern }) {
-    let query = db("review");
-    let matchPattern;
+    let reviews = await this.all();
+
     switch (criterion) {
       case "CONTAINS":
-        matchPattern = `%${pattern}%`;
+        reviews = reviews.filter(review => review[field].includes(pattern));
         break;
       case "START_WITH":
-        matchPattern = `${pattern}%`;
+        reviews = reviews.filter(review => review[field].startsWith(pattern));
         break;
       case "END_WITH":
-        matchPattern = `%${pattern}`;
+        reviews = reviews.filter(review => review[field].endsWith(pattern));
         break;
       case "EQUALS":
-        matchPattern = `${pattern}`;
+        reviews = reviews.filter(review => review[field] === pattern);
         break;
     }
-    query.where(field, "like", matchPattern);
-    return query.then(response => response.map(review => new Review(review)));
+
+    return reviews;
   }
 }

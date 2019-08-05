@@ -1,9 +1,9 @@
 export default {
   Query: {
     offer: (root, { nr }, { repository }) => {
-      return repository.offer.get(nr);
+      return repository.offer.get(parseInt(nr));
     },
-    offers: (root, { where, limit, order }, { repository }) => {
+    offers: async (root, { where, limit, order }, { repository }) => {
       return repository.offer.offers({ where, limit, order }, repository);
     }
   },
@@ -16,8 +16,8 @@ export default {
     }
   },
   CollectionOfEdgesToOffers: {
-    aggregate: (productNr, _, { repository }) => {
-      return repository.offer.findBy({ nr: productNr });
+    aggregate: (vendorNr, _, { repository }) => {
+      return repository.offer.findByVendor({ nr: vendorNr });
     }
   },
   AggregateOffers: {

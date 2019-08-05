@@ -1,14 +1,16 @@
 import Vendor from "./model";
+import _ from "lodash";
 import db from "../database";
 import DataLoader from "dataloader";
 import { simpleSortRows, allGeneric } from "../helpers";
 import { cache } from "../config";
 
 const getVendorByNr = nrs => {
+  const uniqueNrs = _.uniq(nrs);
   let query = db
     .select()
     .from("vendor")
-    .whereIn("nr", nrs);
+    .whereIn("nr", uniqueNrs);
 
   // ensure response has rows in correct order
   return query.then(rows => simpleSortRows(rows, nrs, Vendor));
@@ -17,7 +19,7 @@ const getVendorByNr = nrs => {
 const getAllVendors = keys => {
   let query = db.select().from("vendor");
 
-  return query.then(rows => rows.map(row => new Vendor(row)));
+  return query.then(rows => [rows.map(row => new Vendor(row))]);
 };
 
 export default class VendorRepository {

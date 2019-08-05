@@ -6,25 +6,27 @@ import { simpleSortRows, allGeneric } from "../helpers";
 import { cache } from "../helpers";
 
 const getOfferByNrs = nrs => {
+  const uniqueNrs = _.uniq(nrs);
   let query = db
     .select()
     .from("offer")
-    .whereIn("nr", nrs);
+    .whereIn("nr", uniqueNrs);
 
   return query.then(rows => simpleSortRows(rows, nrs, Offer));
 };
 
 const getOfferByVendorNr = vendorNrs => {
+  const uniqueNrs = _.uniq(vendorNrs);
   let query = db
     .select()
     .from("offer")
-    .whereIn("vendor", vendorNrs);
+    .whereIn("vendor", uniqueNrs);
 
-  return query.then(rows =>
-    vendorNrs.map(nr =>
+  return query.then(rows => {
+    return vendorNrs.map(nr =>
       rows.filter(row => row.vendor === nr).map(row => new Offer(row))
-    )
-  );
+    );
+  });
 };
 
 export default class OfferRepository {
@@ -42,7 +44,7 @@ export default class OfferRepository {
 
   // ! DATALOADED
   async findByVendor({ nr, offset, limit }) {
-    let offers = this.offerByVendorNrLoader.load(nr);
+    let offers = await this.offerByVendorNrLoader.load(nr);
 
     offers = offset ? offers.slice(offset) : offers;
     offers = limit ? offers.slice(0, limit) : offers;
@@ -78,7 +80,8 @@ export default class OfferRepository {
     }
     const vendorNrs = vendors.map(vendor => vendor.nr);
 
-    return this.offerByVendorNrLoader.loadMany(vendorNrs);
+    let offers = await this.offerByVendorNrLoader.loadMany(vendorNrs);
+    return offers.flat();
   }
 
   resolveAndField(query, andInput) {
@@ -107,7 +110,7 @@ export default class OfferRepository {
         vendors = vendors.filter(vendor => vendor.comment.includes(pattern));
         break;
       case "START_WITH":
-        vendors = vendors.filter(vendor => vendor.comment.startWith(pattern));
+        vendors = vendors.filter(vendor => vendor.comment.startsWith(pattern));
         break;
       case "END_WITH":
         vendors = vendors.filter(vendor => vendor.comment.endsWith(pattern));

@@ -1,7 +1,7 @@
 export default {
   Query: {
     productType: (root, { nr }, { repository }) => {
-      return repository.productType.get(nr);
+      return repository.productType.get(parseInt(nr));
     },
     productTypes: (root, _, { repository }) => {
       return repository.productType.all();

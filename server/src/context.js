@@ -7,15 +7,17 @@ import { repository as producerRepo } from "./producer";
 import { repository as offerRepo } from "./offer";
 import { repository as vendorRepo } from "./vendor";
 
-export default {
-  repository: {
-    product: new productRepo(),
-    person: new personRepo(),
-    review: new reviewRepo(),
-    productType: new productTypeRepo(),
-    productFeature: new productFeatureRepo(),
-    producer: new producerRepo(),
-    offer: new offerRepo(),
-    vendor: new vendorRepo()
-  }
+export default () => {
+  return {
+    repository: {
+      product: new productRepo(),
+      person: new personRepo(),
+      review: new reviewRepo(),
+      productType: new productTypeRepo(),
+      productFeature: new productFeatureRepo(),
+      producer: new producerRepo(),
+      offer: new offerRepo(),
+      vendor: new vendorRepo()
+    }
+  };
 };
