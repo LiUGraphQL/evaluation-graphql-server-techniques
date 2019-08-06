@@ -6,56 +6,49 @@ import DataLoader from "dataloader";
 import { simpleSortRows, allGeneric } from "../helpers";
 import { cache } from "../config";
 
-const getProductFeatureByNr = nrs => {
-  const uniqueNrs = _.uniq(nrs);
+const getProductFeatureByNr = nr => {
   let query = db
     .select()
     .from("productfeature")
-    .whereIn("nr", uniqueNrs);
+    .where("nr", nr);
 
-  // ensure response has rows in correct order
-  return query.then(rows => simpleSortRows(rows, nrs, ProductFeature));
+  return query.then(rows => new ProductFeature(rows[0]));
 };
 
-const getProductFeatureProductByProduct = products => {
-  const uniqueNrs = _.uniq(products);
+const getProductFeaturesByNrs = nrs => {
+  let query = db
+    .select()
+    .from("productfeature")
+    .whereIn("nr", nrs);
+
+  return query.then(rows => rows.map(row => new ProductFeature(row)));
+};
+
+const getProductFeatureProductsByProductNr = productNr => {
   let query = db
     .select()
     .from("productfeatureproduct")
-    .whereIn("product", uniqueNrs);
+    .where("product", productNr);
 
-  // ensure response has rows in correct order
-  return query.then(rows =>
-    products.map(nr =>
-      rows
-        .filter(row => row.product === nr)
-        .map(row => new ProductFeatureProduct(row))
-    )
-  );
+  return query.then(rows => rows.map(row => new ProductFeatureProduct(row)));
 };
 
 export default class ProductFeatureRepository {
-  productFeatureByNrLoader = new DataLoader(getProductFeatureByNr, { cache });
-  productFeatureProductByProductLoader = new DataLoader(
-    getProductFeatureProductByProduct,
-    { cache }
-  );
-
-  // ! DATALOADED
+  // ! DUMB
   async get(nr) {
-    return this.productFeatureByNrLoader.load(nr);
+    return getProductFeatureByNr(nr);
   }
 
   async all() {
     return allGeneric(ProductFeature, "productfeature");
   }
 
-  // ! DATALOADED
-  async findBy({ product }) {
-    const productFeatureProducts = await this.productFeatureProductByProductLoader.load(
-      product
+  // ! DUMB
+  async findBy({ product: productNr }) {
+    const productFeatureProducts = await getProductFeatureProductsByProductNr(
+      productNr
     );
-    return this.productFeatureByNrLoader.loadMany(
+    return getProductFeaturesByNrs(
       productFeatureProducts.map(pfp => pfp.productFeature)
     );
   }

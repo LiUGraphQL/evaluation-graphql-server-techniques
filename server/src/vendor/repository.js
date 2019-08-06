@@ -5,36 +5,30 @@ import DataLoader from "dataloader";
 import { simpleSortRows, allGeneric } from "../helpers";
 import { cache } from "../config";
 
-const getVendorByNr = nrs => {
-  const uniqueNrs = _.uniq(nrs);
+const getVendorByNr = nr => {
   let query = db
     .select()
     .from("vendor")
-    .whereIn("nr", uniqueNrs);
+    .where("nr", nr);
 
   // ensure response has rows in correct order
-  return query.then(rows => simpleSortRows(rows, nrs, Vendor));
+  return query.then(rows => new Vendor(rows[0]));
 };
 
-const getAllVendors = keys => {
+const getAllVendors = () => {
   let query = db.select().from("vendor");
 
-  return query.then(rows => [rows.map(row => new Vendor(row))]);
+  return query.then(rows => rows.map(row => new Vendor(row)));
 };
 
 export default class VendorRepository {
-  vendorByNrLoader = new DataLoader(getVendorByNr, { cache });
-  allVendorLoader = new DataLoader(getAllVendors, { cache });
-
-  // ! DATALOADED
+  // ! DUMB
   async get(nr) {
-    return this.vendorByNrLoader.load(nr);
+    return getVendorByNr(nr);
   }
 
-  // ! DATALOADED
+  // ! DUMB
   async all() {
-    let vendors = await this.allVendorLoader.load("all");
-    vendors.forEach(vendor => this.vendorByNrLoader.prime(vendor.nr, vendor));
-    return vendors;
+    return getAllVendors();
   }
 }

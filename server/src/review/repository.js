@@ -5,64 +5,44 @@ import { simpleSortRows, allGeneric } from "../helpers";
 import DataLoader from "dataloader";
 import { cache } from "../config";
 
-const getReviewByNr = nrs => {
-  const uniqueNrs = _.uniq(nrs);
+const getReviewByNr = nr => {
   let query = db
     .select()
     .from("review")
-    .whereIn("nr", uniqueNrs);
+    .where("nr", nr);
 
-  // ensure response has rows in correct order
-  return query.then(rows => simpleSortRows(rows, nrs, Review));
+  return query.then(rows => new Review(rows[0]));
 };
 
-const getReviewByProductNr = nrs => {
-  const uniqueNrs = _.uniq(nrs);
+const getReviewsByProductNr = productNr => {
   let query = db
     .select()
     .from("review")
-    .whereIn("product", uniqueNrs);
+    .where("product", productNr);
 
-  // A loader needs to return items in the correct order, this sorts them.
-  return query.then(rows =>
-    nrs.map(nr =>
-      rows.filter(row => row.product === nr).map(row => new Review(row))
-    )
-  );
+  return query.then(rows => rows.map(row => new Review(row)));
 };
 
-const getAllReviews = keys => {
+const getAllReviews = () => {
   let query = db.select().from("review");
 
-  return query.then(rows => [rows.map(row => new Review(row))]);
+  return query.then(rows => rows.map(row => new Review(row)));
 };
 
 export default class ReviewRepository {
-  reviewByNrLoader = new DataLoader(getReviewByNr, { cache });
-  reviewByProductNrLoader = new DataLoader(getReviewByProductNr, {
-    cache
-  });
-  allReviewLoader = new DataLoader(getAllReviews, { cache });
-
-  // ! DATALOADED
+  // ! DUMB
   async get(nr) {
-    return this.reviewByNrLoader.load(nr);
+    return getReviewByNr(nr);
   }
 
-  // ! DATALOADED
+  // ! DUMB
   async all() {
-    let reviews = await this.allReviewLoader.load("all");
-    reviews.forEach(review => this.reviewByNrLoader.prime(review.nr, review));
-    return reviews;
+    return getAllReviews();
   }
 
-  // ! DATALOADED
-  async sortBy({ productId, field, direction }) {
-    let reviews = await this.reviewByProductNrLoader.load(productId);
-    // Update the reviewByNrLoader cache
-    reviews.forEach(review =>
-      this.reviewByNrLoader.prime(review.nr, new Review(review))
-    );
+  // ! DUMB
+  async sortBy({ productId: productNr, field, direction }) {
+    let reviews = await getReviewsByProductNr(productNr);
 
     const sortByField = (field, direction) => {
       return function(a, b) {
@@ -84,7 +64,7 @@ export default class ReviewRepository {
     return reviews;
   }
 
-  // ! DATALOADED - tho it retrieves all
+  // ! DUMB
   async search({ field, criterion, pattern }) {
     let reviews = await this.all();
 

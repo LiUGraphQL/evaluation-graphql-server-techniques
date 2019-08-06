@@ -5,46 +5,46 @@ import db from "../database";
 import { simpleSortRows, allGeneric } from "../helpers";
 import { cache } from "../helpers";
 
-const getOfferByNrs = nrs => {
-  const uniqueNrs = _.uniq(nrs);
+const getOfferByNr = nr => {
   let query = db
     .select()
     .from("offer")
-    .whereIn("nr", uniqueNrs);
+    .where("nr", nr);
 
-  return query.then(rows => simpleSortRows(rows, nrs, Offer));
+  return query.then(rows => new Offer(rows[0]));
 };
 
-const getOfferByVendorNr = vendorNrs => {
-  const uniqueNrs = _.uniq(vendorNrs);
+const getOffersByVendorNr = vendorNr => {
   let query = db
     .select()
     .from("offer")
-    .whereIn("vendor", uniqueNrs);
+    .where("vendor", vendorNr);
 
-  return query.then(rows => {
-    return vendorNrs.map(nr =>
-      rows.filter(row => row.vendor === nr).map(row => new Offer(row))
-    );
-  });
+  return query.then(rows => rows.map(row => new Offer(row)));
+};
+
+const getOffersByVendorNrs = vendorNrs => {
+  let query = db
+    .select()
+    .from("offer")
+    .whereIn("vendor", vendorNrs);
+
+  return query.then(rows => rows.map(row => new Offer(row)));
 };
 
 export default class OfferRepository {
-  offerByNrLoader = new DataLoader(getOfferByNrs, { cache });
-  offerByVendorNrLoader = new DataLoader(getOfferByVendorNr, { cache });
-
-  // ! DATALOADED
+  // ! DUMB
   async get(nr) {
-    return this.offerByNrLoader.load(nr);
+    return getOfferByNr(nr);
   }
 
   async all() {
     return allGeneric(Offer, "offer");
   }
 
-  // ! DATALOADED
+  // ! DUMB
   async findByVendor({ nr, offset, limit }) {
-    let offers = await this.offerByVendorNrLoader.load(nr);
+    let offers = await getOffersByVendorNr(nr);
 
     offers = offset ? offers.slice(offset) : offers;
     offers = limit ? offers.slice(0, limit) : offers;
@@ -66,6 +66,7 @@ export default class OfferRepository {
     return offers.filter(offer => offer.productId == productNr);
   }
 
+  // ! DUMB
   async where(where, repos) {
     let vendors = await repos.vendor.all();
 
@@ -80,8 +81,7 @@ export default class OfferRepository {
     }
     const vendorNrs = vendors.map(vendor => vendor.nr);
 
-    let offers = await this.offerByVendorNrLoader.loadMany(vendorNrs);
-    return offers.flat();
+    return getOffersByVendorNrs(vendorNrs);
   }
 
   resolveAndField(query, andInput) {

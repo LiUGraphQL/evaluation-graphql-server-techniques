@@ -5,21 +5,18 @@ import { simpleSortRows, allGeneric } from "../helpers";
 import DataLoader from "dataloader";
 import { cache } from "../config";
 
-const getProducerByNrs = nrs => {
-  const uniqueNrs = _.uniq(nrs);
+const getProducerByNr = nr => {
   let query = db
     .select()
     .from("producer")
-    .whereIn("nr", uniqueNrs);
+    .where("nr", nr);
 
-  return query.then(rows => simpleSortRows(rows, nrs, Producer));
+  return query.then(rows => new Producer(rows[0]));
 };
 
 export default class ProducerRepository {
-  producerByNrLoader = new DataLoader(getProducerByNrs, { cache });
-
   async get(nr) {
-    return this.producerByNrLoader.load(nr);
+    return getProducerByNr(nr);
   }
 
   async all() {
