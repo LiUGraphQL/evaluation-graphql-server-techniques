@@ -63,7 +63,7 @@ export default class OfferRepository {
 
   async productOffers({ where, productNr }, repos) {
     let offers = await this.where(where, repos);
-    return offers.filter(offer => offer.product == productNr);
+    return offers.filter(offer => offer.productId == productNr);
   }
 
   async where(where, repos) {

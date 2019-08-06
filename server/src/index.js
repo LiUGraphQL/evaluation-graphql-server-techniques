@@ -10,7 +10,9 @@ dotenv.config();
 const server = new ApolloServer({
   typeDefs,
   resolvers,
-  context: () => context()
+  context: () => {
+    return context();
+  }
   // engine: process.env.ENGINE_API_KEY
 });
 

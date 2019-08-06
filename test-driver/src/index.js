@@ -3,7 +3,7 @@ import os from "os";
 import { join } from "path";
 import fs, { mkdir, writeFile, lstatSync, readdirSync, readFileSync } from "fs";
 import program from "commander";
-import { request } from "graphql-request";
+import { request, GraphQLClient } from "graphql-request";
 import prettyjson from "prettyjson";
 import traverse from "traverse";
 import _ from "lodash";
@@ -157,7 +157,7 @@ if (cluster.isMaster) {
       await asyncForEach(queries, async ({ index, data }) => {
         try {
           let startTime = process.hrtime();
-          const response = await request(SERVER_URL, data);
+          const response = await request(data);
           let endTime = process.hrtime(startTime);
           let leaves = traverse(response).reduce(function(acc, x) {
             if (this.isLeaf) acc.push(x);
