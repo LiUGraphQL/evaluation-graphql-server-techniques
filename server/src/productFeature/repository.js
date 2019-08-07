@@ -2,9 +2,7 @@ import _ from "lodash";
 import ProductFeature from "./model";
 import { model as ProductFeatureProduct } from "../productFeatureProduct";
 import db from "../database";
-import DataLoader from "dataloader";
-import { simpleSortRows, allGeneric } from "../helpers";
-import { cache } from "../config";
+import { allGeneric } from "../helpers";
 
 const getProductFeatureByNr = nr => {
   let query = db
@@ -17,11 +15,11 @@ const getProductFeatureByNr = nr => {
 
 const getProductFeaturesByNrs = nrs => {
   let query = db
-    .select()
+    .select("nr")
     .from("productfeature")
     .whereIn("nr", nrs);
 
-  return query.then(rows => rows.map(row => new ProductFeature(row)));
+  return query.then(rows => rows.map(({ nr }) => ({ nr })));
 };
 
 const getProductFeatureProductsByProductNr = productNr => {
@@ -44,9 +42,9 @@ export default class ProductFeatureRepository {
   }
 
   // ! DUMB
-  async findBy({ product: productNr }) {
+  async byProductNr({ nr }) {
     const productFeatureProducts = await getProductFeatureProductsByProductNr(
-      productNr
+      nr
     );
     return getProductFeaturesByNrs(
       productFeatureProducts.map(pfp => pfp.productFeature)

@@ -3,9 +3,7 @@ import _ from "lodash";
 import { model as ProductTypeProduct } from "../productTypeProduct";
 import { model as ProductFeatureProduct } from "../productFeatureProduct";
 import db from "../database";
-import { simpleSortRows, allGeneric } from "../helpers";
-import DataLoader from "dataloader";
-import { cache } from "../config";
+import { allGeneric } from "../helpers";
 
 const getProductByNr = nr => {
   let query = db
@@ -18,20 +16,20 @@ const getProductByNr = nr => {
 
 const getProductsByNrs = nrs => {
   let query = db
-    .select()
+    .select("nr")
     .from("product")
     .whereIn("nr", nrs);
 
-  return query.then(rows => rows.map(row => new Product(row)));
+  return query.then(rows => rows.map(({ nr }) => ({ nr })));
 };
 
 const getProductsByProducerNr = producerNr => {
   let query = db
-    .select()
+    .select("nr")
     .from("product")
     .where("producer", producerNr);
 
-  return query.then(rows => rows.map(row => new Product(row)));
+  return query.then(rows => rows.map(({ nr }) => ({ nr })));
 };
 
 const getProductTypeProductByProductType = productTypeNr => {

@@ -1,9 +1,7 @@
 import _ from "lodash";
-import DataLoader from "dataloader";
 import Offer from "./model";
 import db from "../database";
-import { simpleSortRows, allGeneric } from "../helpers";
-import { cache } from "../helpers";
+import { allGeneric } from "../helpers";
 
 const getOfferByNr = nr => {
   let query = db
@@ -16,13 +14,14 @@ const getOfferByNr = nr => {
 
 const getOffersByVendorNr = vendorNr => {
   let query = db
-    .select()
+    .select("nr")
     .from("offer")
     .where("vendor", vendorNr);
 
-  return query.then(rows => rows.map(row => new Offer(row)));
+  return query.then(rows => rows.map(({ nr }) => ({ nr })));
 };
 
+// ! this needs to return Offers because of offers (order)
 const getOffersByVendorNrs = vendorNrs => {
   let query = db
     .select()
@@ -30,6 +29,15 @@ const getOffersByVendorNrs = vendorNrs => {
     .whereIn("vendor", vendorNrs);
 
   return query.then(rows => rows.map(row => new Offer(row)));
+};
+
+const getOffersByProductNr = productNr => {
+  let query = db
+    .select("nr")
+    .from("offer")
+    .where("product", productNr);
+
+  return query.then(rows => rows.map(({ nr }) => ({ nr })));
 };
 
 export default class OfferRepository {
@@ -43,30 +51,41 @@ export default class OfferRepository {
   }
 
   // ! DUMB
-  async findByVendor({ nr, offset, limit }) {
-    let offers = await getOffersByVendorNr(nr);
-
-    offers = offset ? offers.slice(offset) : offers;
-    offers = limit ? offers.slice(0, limit) : offers;
-
-    return offers;
+  async findByVendor({ nr, limit, offset }) {
+    const offers = await getOffersByVendorNr(nr);
+    return this.limitOffsetOrder({ offers, limit, offset });
   }
 
-  async offers({ where, limit, order }, repos) {
-    let offers = await this.where(where, repos);
-
+  limitOffsetOrder({ offers, limit, offset, order }) {
+    offers = offset ? offers.slice(offset) : offers;
     offers = limit ? offers.slice(0, limit) : offers;
     offers = order ? _.orderBy(offers, order) : offers;
 
     return offers;
   }
 
+  async offers({ where, limit, order }, repos) {
+    const vendorNrs = await this.where(where, repos);
+    let offers = await getOffersByVendorNrs(vendorNrs);
+    offers = this.limitOffsetOrder({ offers, limit, order });
+    return offers.map(({ nr }) => ({ nr }));
+  }
+
+  // ? With field-specific all selects except the last one
+  // ? only gets the nrs, so this becomes a little cumbersome here.
   async productOffers({ where, productNr }, repos) {
-    let offers = await this.where(where, repos);
-    return offers.filter(offer => offer.productId == productNr);
+    const vendorNrs = this.where(where, repos);
+    const offersByProduct = getOffersByProductNr(productNr);
+    await vendorNrs;
+    let offersByVendor = await getOffersByVendorNrs(vendorNrs);
+    await offersByProduct;
+    offersByVendor = offersByVendor.map(({ nr }) => ({ nr }));
+
+    return _.unionBy(offersByProduct, offersByVendor, "nr");
   }
 
   // ! DUMB
+  // ? returns vendorNrs.
   async where(where, repos) {
     let vendors = await repos.vendor.all();
 
@@ -81,7 +100,7 @@ export default class OfferRepository {
     }
     const vendorNrs = vendors.map(vendor => vendor.nr);
 
-    return getOffersByVendorNrs(vendorNrs);
+    return vendorNrs;
   }
 
   resolveAndField(query, andInput) {

@@ -1,9 +1,7 @@
 import _ from "lodash";
 import Person from "./model";
 import db from "../database";
-import { simpleSortRows, allGeneric } from "../helpers";
-import DataLoader from "dataloader";
-import { cache } from "../config";
+import { allGeneric } from "../helpers";
 
 const getPersonByNr = nr => {
   let query = db

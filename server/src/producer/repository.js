@@ -1,9 +1,7 @@
 import Producer from "./model";
 import _ from "lodash";
 import db from "../database";
-import { simpleSortRows, allGeneric } from "../helpers";
-import DataLoader from "dataloader";
-import { cache } from "../config";
+import { allGeneric } from "../helpers";
 
 const getProducerByNr = nr => {
   let query = db

@@ -1,9 +1,6 @@
 import _ from "lodash";
 import Review from "./model";
 import db from "../database";
-import { simpleSortRows, allGeneric } from "../helpers";
-import DataLoader from "dataloader";
-import { cache } from "../config";
 
 const getReviewByNr = nr => {
   let query = db
@@ -41,7 +38,7 @@ export default class ReviewRepository {
   }
 
   // ! DUMB
-  async sortBy({ productId: productNr, field, direction }) {
+  async sortBy({ product: productNr, field, direction }) {
     let reviews = await getReviewsByProductNr(productNr);
 
     const sortByField = (field, direction) => {
@@ -61,7 +58,7 @@ export default class ReviewRepository {
 
     if (field) reviews = reviews.sort(sortByField(field, direction));
 
-    return reviews;
+    return reviews.map(({ nr }) => ({ nr }));
   }
 
   // ! DUMB
@@ -83,6 +80,6 @@ export default class ReviewRepository {
         break;
     }
 
-    return reviews;
+    return reviews.map(({ nr }) => ({ nr }));
   }
 }

@@ -2,9 +2,7 @@ import _ from "lodash";
 import ProductType from "./model";
 import { model as ProductTypeProduct } from "../productTypeProduct";
 import db from "../database";
-import DataLoader from "dataloader";
-import { simpleSortRows, allGeneric } from "../helpers";
-import { cache } from "../config";
+import { allGeneric } from "../helpers";
 
 const getProductTypeByNr = nr => {
   let query = db
@@ -35,10 +33,8 @@ export default class ProductTypeRepository {
   }
 
   // ! DUMB
-  async findBy({ product: productNr }) {
-    const productTypeProduct = await getProductTypeProductByProductNr(
-      productNr
-    );
+  async byProductNr({ nr }) {
+    const productTypeProduct = await getProductTypeProductByProductNr(nr);
     return getProductTypeByNr(productTypeProduct.productType);
   }
 }

@@ -1,17 +1,46 @@
 export default {
   Query: {
-    offer: (root, { nr }, { repository }) => {
-      return repository.offer.get(parseInt(nr));
-    },
+    offer: (root, { nr }) => ({ nr }),
     offers: async (root, { where, limit, order }, { repository }) => {
       return repository.offer.offers({ where, limit, order }, repository);
     }
   },
   Offer: {
-    product: ({ productId }, _, { repository }) => {
+    nr: async ({ nr }) => nr,
+    price: async ({ nr }, _, { repository }) => {
+      const { price } = await repository.offer.get(nr);
+      return price;
+    },
+    validFrom: async ({ nr }, _, { repository }) => {
+      const { validFrom } = await repository.offer.get(nr);
+      return validFrom;
+    },
+    validTo: async ({ nr }, _, { repository }) => {
+      const { validTo } = await repository.offer.get(nr);
+      return validTo;
+    },
+    deliveryDays: async ({ nr }, _, { repository }) => {
+      const { deliveryDays } = await repository.offer.get(nr);
+      return deliveryDays;
+    },
+    offerWebpage: async ({ nr }, _, { repository }) => {
+      const { offerWebpage } = await repository.offer.get(nr);
+      return offerWebpage;
+    },
+    publisher: async ({ nr }, _, { repository }) => {
+      const { publisher } = await repository.offer.get(nr);
+      return publisher;
+    },
+    publishDate: async ({ nr }, _, { repository }) => {
+      const { publishDate } = await repository.offer.get(nr);
+      return publishDate;
+    },
+    product: async ({ nr }, _, { repository }) => {
+      const { productId } = await repository.offer.get(nr);
       return repository.product.get(productId);
     },
-    vendor: ({ vendorId }, _, { repository }) => {
+    vendor: async ({ nr }, _, { repository }) => {
+      const { vendorId } = await repository.offer.get(nr);
       return repository.vendor.get(vendorId);
     }
   },

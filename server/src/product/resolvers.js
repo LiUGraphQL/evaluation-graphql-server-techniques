@@ -1,27 +1,39 @@
 export default {
   Query: {
-    product: (root, { nr }, { repository }) => {
-      return repository.product.get(parseInt(nr));
-    },
+    product: (root, { nr }) => ({ nr }),
     products: (root, args, { repository }) => {
       return repository.product.all();
     }
   },
   Product: {
-    producer: ({ producer }, args, { repository }) => {
+    nr: ({ nr }) => nr,
+    label: async ({ nr }, _, { repository }) => {
+      const { label } = await repository.product.get(nr);
+      return label;
+    },
+    comment: async ({ nr }, _, { repository }) => {
+      const { comment } = await repository.product.get(nr);
+      return comment;
+    },
+    producer: async ({ nr }, _, { repository }) => {
+      const { producer } = await repository.product.get(nr);
       return repository.producer.get(producer);
     },
     type: ({ nr }, _, { repository }) => {
-      return repository.productType.findBy({ product: nr });
+      return repository.productType.byProductNr({ nr });
     },
     features: ({ nr }, _, { repository }) => {
-      return repository.productFeature.findBy({ product: nr });
+      return repository.productFeature.byProductNr({ nr });
+    },
+    publishDate: async ({ nr }, _, { repository }) => {
+      const { publishDate } = await repository.product.get(nr);
+      return publishDate;
     },
     reviews: ({ nr }, { order }, { repository }) => {
       // using || {} because order might be undefined which otherwise will throw an error.
       const { field, direction } = order || {};
       return repository.review.sortBy({
-        productId: nr,
+        product: nr,
         field,
         direction
       });
