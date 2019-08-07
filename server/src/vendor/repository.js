@@ -1,9 +1,7 @@
 import Vendor from "./model";
 import _ from "lodash";
 import db from "../database";
-import DataLoader from "dataloader";
-import { simpleSortRows, allGeneric } from "../helpers";
-import { cache } from "../config";
+import { memoize } from "../helpers";
 
 const getVendorByNr = nr => {
   let query = db
@@ -11,24 +9,26 @@ const getVendorByNr = nr => {
     .from("vendor")
     .where("nr", nr);
 
-  // ensure response has rows in correct order
   return query.then(rows => new Vendor(rows[0]));
 };
 
-const getAllVendors = () => {
+const getAllVendors = args => {
   let query = db.select().from("vendor");
 
   return query.then(rows => rows.map(row => new Vendor(row)));
 };
 
 export default class VendorRepository {
+  memoizedGetVendorByNr = memoize(getVendorByNr);
+  memoizedGetAllVendors = memoize(getAllVendors);
+
   // ! DUMB
   async get(nr) {
-    return getVendorByNr(nr);
+    return this.memoizedGetVendorByNr(nr);
   }
 
   // ! DUMB
   async all() {
-    return getAllVendors();
+    return this.memoizedGetAllVendors("all");
   }
 }

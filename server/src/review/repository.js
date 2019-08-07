@@ -1,9 +1,7 @@
 import _ from "lodash";
 import Review from "./model";
 import db from "../database";
-import { simpleSortRows, allGeneric } from "../helpers";
-import DataLoader from "dataloader";
-import { cache } from "../config";
+import { memoize } from "../helpers";
 
 const getReviewByNr = nr => {
   let query = db
@@ -23,26 +21,30 @@ const getReviewsByProductNr = productNr => {
   return query.then(rows => rows.map(row => new Review(row)));
 };
 
-const getAllReviews = () => {
+const getAllReviews = args => {
   let query = db.select().from("review");
 
   return query.then(rows => rows.map(row => new Review(row)));
 };
 
 export default class ReviewRepository {
+  memoizedGetReviewByNr = memoize(getReviewByNr);
+  memoizedGetReviewsByProductNr = memoize(getReviewsByProductNr);
+  memoizedGetAllReviews = memoize(getAllReviews);
+
   // ! DUMB
   async get(nr) {
-    return getReviewByNr(nr);
+    return this.memoizedGetReviewByNr(nr);
   }
 
   // ! DUMB
   async all() {
-    return getAllReviews();
+    return this.memoizedGetAllReviews("all");
   }
 
   // ! DUMB
   async sortBy({ productId: productNr, field, direction }) {
-    let reviews = await getReviewsByProductNr(productNr);
+    let reviews = await this.memoizedGetReviewsByProductNr(productNr);
 
     const sortByField = (field, direction) => {
       return function(a, b) {

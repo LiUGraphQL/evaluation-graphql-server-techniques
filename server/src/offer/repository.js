@@ -1,9 +1,8 @@
 import _ from "lodash";
-import DataLoader from "dataloader";
 import Offer from "./model";
 import db from "../database";
-import { simpleSortRows, allGeneric } from "../helpers";
-import { cache } from "../helpers";
+import { allGeneric } from "../helpers";
+import { memoize } from "../helpers";
 
 const getOfferByNr = nr => {
   let query = db
@@ -33,9 +32,13 @@ const getOffersByVendorNrs = vendorNrs => {
 };
 
 export default class OfferRepository {
+  memoizedGetOfferByNr = memoize(getOfferByNr);
+  memoizedGetOffersByVendorNr = memoize(getOffersByVendorNr);
+  memoizedGetOffersByVendorNrs = memoize(getOffersByVendorNrs);
+
   // ! DUMB
   async get(nr) {
-    return getOfferByNr(nr);
+    return this.memoizedGetOfferByNr(nr);
   }
 
   async all() {
@@ -44,7 +47,7 @@ export default class OfferRepository {
 
   // ! DUMB
   async findByVendor({ nr, offset, limit }) {
-    let offers = await getOffersByVendorNr(nr);
+    let offers = await this.memoizedGetOffersByVendorNr(nr);
 
     offers = offset ? offers.slice(offset) : offers;
     offers = limit ? offers.slice(0, limit) : offers;
@@ -81,7 +84,7 @@ export default class OfferRepository {
     }
     const vendorNrs = vendors.map(vendor => vendor.nr);
 
-    return getOffersByVendorNrs(vendorNrs);
+    return this.memoizedGetOffersByVendorNrs(vendorNrs);
   }
 
   resolveAndField(query, andInput) {

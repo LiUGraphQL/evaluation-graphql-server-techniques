@@ -2,9 +2,7 @@ import _ from "lodash";
 import ProductType from "./model";
 import { model as ProductTypeProduct } from "../productTypeProduct";
 import db from "../database";
-import DataLoader from "dataloader";
-import { simpleSortRows, allGeneric } from "../helpers";
-import { cache } from "../config";
+import { memoize, allGeneric } from "../helpers";
 
 const getProductTypeByNr = nr => {
   let query = db
@@ -25,9 +23,14 @@ const getProductTypeProductByProductNr = productNr => {
 };
 
 export default class ProductTypeRepository {
+  memoizedGetProductTypeByNr = memoize(getProductTypeByNr);
+  memoizedGetProductTypeProductByProductNr = memoize(
+    getProductTypeProductByProductNr
+  );
+
   // ! DUMB
   async get(nr) {
-    return getProductTypeByNr(nr);
+    return this.memoizedGetProductTypeByNr(nr);
   }
 
   async all() {
@@ -36,9 +39,9 @@ export default class ProductTypeRepository {
 
   // ! DUMB
   async findBy({ product: productNr }) {
-    const productTypeProduct = await getProductTypeProductByProductNr(
+    const productTypeProduct = await this.memoizedGetProductTypeProductByProductNr(
       productNr
     );
-    return getProductTypeByNr(productTypeProduct.productType);
+    return this.memoizedGetProductTypeByNr(productTypeProduct.productType);
   }
 }

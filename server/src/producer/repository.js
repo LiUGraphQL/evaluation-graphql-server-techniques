@@ -1,9 +1,7 @@
 import Producer from "./model";
 import _ from "lodash";
 import db from "../database";
-import { simpleSortRows, allGeneric } from "../helpers";
-import DataLoader from "dataloader";
-import { cache } from "../config";
+import { memoize, allGeneric } from "../helpers";
 
 const getProducerByNr = nr => {
   let query = db
@@ -15,8 +13,10 @@ const getProducerByNr = nr => {
 };
 
 export default class ProducerRepository {
+  memoizedGetProducerByNr = memoize(getProducerByNr);
+
   async get(nr) {
-    return getProducerByNr(nr);
+    return this.memoizedGetProducerByNr(nr);
   }
 
   async all() {
