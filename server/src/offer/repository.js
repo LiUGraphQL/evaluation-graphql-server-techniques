@@ -12,6 +12,15 @@ const getOfferByNr = nr => {
   return query.then(rows => new Offer(rows[0]));
 };
 
+const getOfferPricesByNrs = nrs => {
+  let query = db
+    .select("price")
+    .from("offer")
+    .whereIn("nr", nrs);
+
+  return query.then(rows => rows.map(row => row.price));
+};
+
 const getOffersByVendorNr = vendorNr => {
   let query = db
     .select("nr")
@@ -50,6 +59,10 @@ export default class OfferRepository {
     return allGeneric(Offer, "offer");
   }
 
+  async pricesByNrs(nrs) {
+    return getOfferPricesByNrs(nrs);
+  }
+
   // ! DUMB
   async findByVendor({ nr, limit, offset }) {
     const offers = await getOffersByVendorNr(nr);
@@ -74,14 +87,13 @@ export default class OfferRepository {
   // ? With field-specific all selects except the last one
   // ? only gets the nrs, so this becomes a little cumbersome here.
   async productOffers({ where, productNr }, repos) {
-    const vendorNrs = this.where(where, repos);
-    const offersByProduct = getOffersByProductNr(productNr);
-    await vendorNrs;
+    const vendorNrsPromise = this.where(where, repos);
+    const offersByProductPromise = getOffersByProductNr(productNr);
+    const vendorNrs = await vendorNrsPromise;
     let offersByVendor = await getOffersByVendorNrs(vendorNrs);
-    await offersByProduct;
+    const offersByProduct = await offersByProductPromise;
     offersByVendor = offersByVendor.map(({ nr }) => ({ nr }));
-
-    return _.unionBy(offersByProduct, offersByVendor, "nr");
+    return _.intersectionBy(offersByProduct, offersByVendor, "nr");
   }
 
   // ! DUMB

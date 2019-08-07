@@ -34,8 +34,6 @@ export default {
     offers: ({ nr }, { limit, offset }, { repository }) => {
       return repository.offer.findByVendor({ nr, limit, offset });
     },
-    offersConnection: ({ nr: vendorNr }) => {
-      return vendorNr;
-    }
+    offersConnection: ({ nr }) => ({ nr })
   }
 };

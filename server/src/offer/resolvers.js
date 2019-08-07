@@ -45,34 +45,31 @@ export default {
     }
   },
   CollectionOfEdgesToOffers: {
-    aggregate: (vendorNr, _, { repository }) => {
-      return repository.offer.findByVendor({ nr: vendorNr });
+    aggregate: ({ nr }, _, { repository }) => {
+      return repository.offer.findByVendor({ nr });
     }
   },
   AggregateOffers: {
-    count: offers => offers.length,
-    price: offers => offers
+    count: offerNrs => offerNrs.length,
+    price: (offerNrs, _, { repository }) => {
+      return repository.offer.pricesByNrs(offerNrs.map(offer => offer.nr));
+    }
   },
   PriceAggregationOfOffers: {
-    avg: offers => {
-      const prices = getPricesFromOffers(offers);
+    avg: prices => {
       const sum = sumPrices(prices);
-      return sum / offers.length;
+      return sum / prices.length;
     },
-    sum: offers => {
-      const prices = getPricesFromOffers(offers);
+    sum: prices => {
       return sumPrices(prices);
     },
-    max: offers => {
-      const prices = getPricesFromOffers(offers);
+    max: prices => {
       return Math.max(...prices);
     },
-    min: offers => {
-      const prices = getPricesFromOffers(offers);
+    min: prices => {
       return Math.min(...prices);
     }
   }
 };
 
-const getPricesFromOffers = offers => offers.map(offer => offer.price);
 const sumPrices = prices => prices.reduce((curr, accu) => curr + accu, 0);
