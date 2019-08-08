@@ -1,7 +1,7 @@
 import _ from "lodash";
 import Offer from "./model";
 import db from "../database";
-import { allGeneric } from "../helpers";
+import { memoize, allGeneric } from "../helpers";
 
 const getOfferByNr = nr => {
   let query = db
@@ -50,9 +50,15 @@ const getOffersByProductNr = productNr => {
 };
 
 export default class OfferRepository {
+  memoizedGetOfferByNr = memoize(getOfferByNr);
+  memoizedGetOfferPricesByNrs = memoize(getOfferPricesByNrs);
+  memoizedGetOffersByVendorNr = memoize(getOffersByVendorNr);
+  memoizedGetOffersByVendorNrs = memoize(getOffersByVendorNrs);
+  memoizedGetOffersByProductNr = memoize(getOffersByProductNr);
+
   // ! DUMB
   async get(nr) {
-    return getOfferByNr(nr);
+    return this.memoizedGetOfferByNr(nr);
   }
 
   async all() {
@@ -60,12 +66,12 @@ export default class OfferRepository {
   }
 
   async pricesByNrs(nrs) {
-    return getOfferPricesByNrs(nrs);
+    return this.memoizedGetOfferPricesByNrs(nrs);
   }
 
   // ! DUMB
   async findByVendor({ nr, limit, offset }) {
-    const offers = await getOffersByVendorNr(nr);
+    const offers = await this.memoizedGetOffersByVendorNr(nr);
     return this.limitOffsetOrder({ offers, limit, offset });
   }
 
@@ -79,7 +85,7 @@ export default class OfferRepository {
 
   async offers({ where, limit, order }, repos) {
     const vendorNrs = await this.where(where, repos);
-    let offers = await getOffersByVendorNrs(vendorNrs);
+    let offers = await this.memoizedGetOffersByVendorNrs(vendorNrs);
     offers = this.limitOffsetOrder({ offers, limit, order });
     return offers.map(({ nr }) => ({ nr }));
   }
@@ -88,9 +94,9 @@ export default class OfferRepository {
   // ? only gets the nrs, so this becomes a little cumbersome here.
   async productOffers({ where, productNr }, repos) {
     const vendorNrsPromise = this.where(where, repos);
-    const offersByProductPromise = getOffersByProductNr(productNr);
+    const offersByProductPromise = this.memoizedGetOffersByProductNr(productNr);
     const vendorNrs = await vendorNrsPromise;
-    let offersByVendor = await getOffersByVendorNrs(vendorNrs);
+    let offersByVendor = await this.memoizedGetOffersByVendorNrs(vendorNrs);
     const offersByProduct = await offersByProductPromise;
     offersByVendor = offersByVendor.map(({ nr }) => ({ nr }));
     return _.intersectionBy(offersByProduct, offersByVendor, "nr");

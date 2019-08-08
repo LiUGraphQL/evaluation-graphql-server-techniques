@@ -3,7 +3,7 @@ import _ from "lodash";
 import { model as ProductTypeProduct } from "../productTypeProduct";
 import { model as ProductFeatureProduct } from "../productFeatureProduct";
 import db from "../database";
-import { allGeneric } from "../helpers";
+import { memoize, allGeneric } from "../helpers";
 
 const getProductByNr = nr => {
   let query = db
@@ -32,7 +32,7 @@ const getProductsByProducerNr = producerNr => {
   return query.then(rows => rows.map(({ nr }) => ({ nr })));
 };
 
-const getProductTypeProductByProductType = productTypeNr => {
+const getProductTypeProductsByProductType = productTypeNr => {
   let query = db
     .select()
     .from("producttypeproduct")
@@ -51,9 +51,19 @@ const getProductFeatureProductsByProductFeature = productFeaturesNr => {
 };
 
 export default class ProductRepository {
+  memoizedGetProductByNr = memoize(getProductByNr);
+  memoizedGetProductsByNrs = memoize(getProductsByNrs);
+  memoizedGetProductsByProducerNr = memoize(getProductsByProducerNr);
+  memoizedGetProductTypeProductsByProductType = memoize(
+    getProductTypeProductsByProductType
+  );
+  memoizedGetProductFeatureProductsByProductFeature = memoize(
+    getProductFeatureProductsByProductFeature
+  );
+
   // ! DUMB
   async get(nr) {
-    return getProductByNr(nr);
+    return this.memoizedGetProductByNr(nr);
   }
 
   async all() {
@@ -63,17 +73,21 @@ export default class ProductRepository {
   // ! DUMB
   async findBy({ producerNr, productType, productFeature }) {
     if (producerNr) {
-      return getProductsByProducerNr(producerNr);
+      return this.memoizedGetProductsByProducerNr(producerNr);
     } else if (productType) {
-      const productTypeProducts = await getProductTypeProductByProductType(
+      const productTypeProducts = await this.memoizedGetProductTypeProductsByProductType(
         productType
       );
-      return getProductsByNrs(productTypeProducts.map(ptp => ptp.product));
+      return this.memoizedGetProductsByNrs(
+        productTypeProducts.map(ptp => ptp.product)
+      );
     } else if (productFeature) {
-      const productFeatureProducts = await getProductFeatureProductsByProductFeature(
+      const productFeatureProducts = await this.memoizedGetProductFeatureProductsByProductFeature(
         productFeature
       );
-      return getProductsByNrs(productFeatureProducts.map(pfp => pfp.product));
+      return this.memoizedGetProductsByNrs(
+        productFeatureProducts.map(pfp => pfp.product)
+      );
     } else {
       throw Error("Missing argument.");
     }

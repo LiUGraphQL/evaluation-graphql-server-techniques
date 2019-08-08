@@ -1,6 +1,6 @@
 export default {
   Query: {
-    productType: (root, { nr }) => ({ nr }),
+    productType: (root, { nr }) => ({ nr: parseInt(nr) }),
     productTypes: (root, _, { repository }) => {
       return repository.productType.all();
     }

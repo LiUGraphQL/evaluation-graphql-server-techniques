@@ -1,6 +1,6 @@
 export default {
   Query: {
-    vendor: (root, { nr }) => ({ nr }),
+    vendor: (root, { nr }) => ({ nr: parseInt(nr) }),
     vendors: (root, _, { repository }) => {
       return repository.vendor.all();
     }

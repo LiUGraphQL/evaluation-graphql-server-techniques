@@ -1,6 +1,6 @@
 export default {
   Query: {
-    productFeature: (root, { nr }) => ({ nr }),
+    productFeature: (root, { nr }) => ({ nr: parseInt(nr) }),
     productFeatures: (root, _, { repository }) => {
       return repository.productFeature.all();
     }

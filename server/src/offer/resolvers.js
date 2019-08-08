@@ -1,6 +1,6 @@
 export default {
   Query: {
-    offer: (root, { nr }) => ({ nr }),
+    offer: (root, { nr }) => ({ nr: parseInt(nr) }),
     offers: async (root, { where, limit, order }, { repository }) => {
       return repository.offer.offers({ where, limit, order }, repository);
     }

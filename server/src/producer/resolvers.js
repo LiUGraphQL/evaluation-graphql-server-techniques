@@ -1,6 +1,6 @@
 export default {
   Query: {
-    producer: (root, { nr }) => ({ nr }),
+    producer: (root, { nr }) => ({ nr: parseInt(nr) }),
     producers: (root, args, { repository }) => {
       return repository.producer.all();
     }

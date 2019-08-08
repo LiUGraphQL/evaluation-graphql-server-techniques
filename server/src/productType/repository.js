@@ -2,7 +2,7 @@ import _ from "lodash";
 import ProductType from "./model";
 import { model as ProductTypeProduct } from "../productTypeProduct";
 import db from "../database";
-import { allGeneric } from "../helpers";
+import { memoize, allGeneric } from "../helpers";
 
 const getProductTypeByNr = nr => {
   let query = db
@@ -23,9 +23,14 @@ const getProductTypeProductByProductNr = productNr => {
 };
 
 export default class ProductTypeRepository {
+  memoizedGetProductTypeByNr = memoize(getProductTypeByNr);
+  memoizedGetProductTypeProductByProductNr = memoize(
+    getProductTypeProductByProductNr
+  );
+
   // ! DUMB
   async get(nr) {
-    return getProductTypeByNr(nr);
+    return this.memoizedGetProductTypeByNr(nr);
   }
 
   async all() {
@@ -34,7 +39,9 @@ export default class ProductTypeRepository {
 
   // ! DUMB
   async byProductNr({ nr }) {
-    const productTypeProduct = await getProductTypeProductByProductNr(nr);
-    return getProductTypeByNr(productTypeProduct.productType);
+    const productTypeProduct = await this.memoizedGetProductTypeProductByProductNr(
+      nr
+    );
+    return this.get(productTypeProduct.productType);
   }
 }

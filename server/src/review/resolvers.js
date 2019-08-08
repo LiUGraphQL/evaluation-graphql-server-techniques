@@ -1,6 +1,6 @@
 export default {
   Query: {
-    review: (root, { nr }) => ({ nr }),
+    review: (root, { nr }) => ({ nr: parseInt(nr) }),
     reviews: (root, args, { repository }) => {
       return repository.review.all();
     },

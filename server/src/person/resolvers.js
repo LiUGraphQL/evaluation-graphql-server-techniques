@@ -1,6 +1,6 @@
 export default {
   Query: {
-    person: (root, { nr }) => ({ nr }),
+    person: (root, { nr }) => ({ nr: parseInt(nr) }),
     persons: (root, args, { repository }) => {
       return repository.person.all();
     }

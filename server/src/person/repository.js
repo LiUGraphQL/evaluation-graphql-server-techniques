@@ -1,7 +1,7 @@
 import _ from "lodash";
 import Person from "./model";
 import db from "../database";
-import { allGeneric } from "../helpers";
+import { memoize, allGeneric } from "../helpers";
 
 const getPersonByNr = nr => {
   let query = db
@@ -13,8 +13,10 @@ const getPersonByNr = nr => {
 };
 
 export default class PersonRepository {
+  memoizedGetPersonByNr = memoize(getPersonByNr);
+
   async get(nr) {
-    return getPersonByNr(nr);
+    return this.memoizedGetPersonByNr(nr);
   }
 
   async all() {

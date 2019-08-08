@@ -1,9 +1,7 @@
 import Vendor from "./model";
 import _ from "lodash";
 import db from "../database";
-import DataLoader from "dataloader";
-import { simpleSortRows, allGeneric } from "../helpers";
-import { cache } from "../config";
+import { memoize } from "../helpers";
 
 const getVendorByNr = nr => {
   let query = db
@@ -22,13 +20,16 @@ const getAllVendors = () => {
 };
 
 export default class VendorRepository {
+  memoizedGetVendorByNr = memoize(getVendorByNr);
+  memoizedGetAllVendors = memoize(getAllVendors);
+
   // ! DUMB
   async get(nr) {
-    return getVendorByNr(nr);
+    return this.memoizedGetVendorByNr(nr);
   }
 
   // ! DUMB
   async all() {
-    return getAllVendors();
+    return this.memoizedGetAllVendors("all");
   }
 }
