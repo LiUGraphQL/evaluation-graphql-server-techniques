@@ -8,6 +8,8 @@ import prettyjson from "prettyjson";
 import traverse from "traverse";
 import _ from "lodash";
 import { Parser } from "json2csv";
+import mysql from "mysql2/promise";
+import bluebird from "bluebird";
 
 if (cluster.isMaster) {
   // MASTER
@@ -138,7 +140,14 @@ if (cluster.isMaster) {
   }
 
   for (const id in cluster.workers) {
-    cluster.workers[id].send({ command: "START", data: SERVER_URL });
+    let countDbReqs = false;
+    if (program.clients == 1) {
+      countDbReqs = true;
+    }
+    cluster.workers[id].send({
+      command: "START",
+      data: { url: SERVER_URL, countDbReqs }
+    });
   }
 } else {
   // WORKER
@@ -152,13 +161,42 @@ if (cluster.isMaster) {
     }
   };
 
-  const start = async SERVER_URL => {
+  const start = async ({ url, countDbReqs }) => {
+    let db;
+    if (countDbReqs) {
+      db = await mysql.createConnection({
+        host: "localhost",
+        user: "test",
+        password: "pass",
+        database: "benchmark",
+        Promise: bluebird
+      });
+    }
     await asyncForEach(queryTemplates, async ({ queryTemplate, queries }) => {
       await asyncForEach(queries, async ({ index, data }) => {
         try {
+          let preQuery;
+          if (countDbReqs) {
+            const [rows] = await db.query(
+              "SHOW GLOBAL STATUS LIKE 'com_select'"
+            );
+            const { Value } = rows[0];
+            preQuery = Value;
+          }
+
           let startTime = process.hrtime();
-          const response = await request(data);
+          const response = await request(url, data);
           let endTime = process.hrtime(startTime);
+
+          let afterQuery;
+          if (countDbReqs) {
+            const [rowsAfter] = await db.query(
+              "SHOW GLOBAL STATUS LIKE 'com_select'"
+            );
+            const { Value } = rowsAfter[0];
+            afterQuery = Value;
+          }
+
           let leaves = traverse(response).reduce(function(acc, x) {
             if (this.isLeaf) acc.push(x);
             return acc;
@@ -173,7 +211,10 @@ if (cluster.isMaster) {
               queryNumber: index,
               timeMs: totalTime,
               leafNodes: leaves.length,
-              error: 0
+              error: 0,
+              dbRequests: countDbReqs
+                ? parseInt(afterQuery) - parseInt(preQuery)
+                : 0
             }
           });
           // console.log(response);
