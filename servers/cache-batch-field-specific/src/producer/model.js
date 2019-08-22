@@ -1,5 +1,6 @@
 export default class Producer {
   constructor(args) {
+    console.log(args);
     this.nr = args.nr;
     this.label = args.label;
     this.comment = args.comment;

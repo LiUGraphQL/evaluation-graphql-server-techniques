@@ -12,8 +12,7 @@ export default class Review {
     this.publishDate = args.publishDate;
 
     // Relations
-    this.productId = args.product;
-    this.reviewerId = args.person;
-    // this.producerId = review.producer;
+    this.product = args.product;
+    this.reviewer = args.person;
   }
 }

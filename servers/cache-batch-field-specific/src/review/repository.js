@@ -1,7 +1,7 @@
 import _ from "lodash";
 import Review from "./model";
 import db from "../database";
-import { simpleSortRows, allGeneric } from "../helpers";
+import { simpleSortRows } from "../helpers";
 import DataLoader from "dataloader";
 import { cache } from "../config";
 
@@ -60,9 +60,7 @@ export default class ReviewRepository {
   async sortBy({ productId, field, direction }) {
     let reviews = await this.reviewByProductNrLoader.load(productId);
     // Update the reviewByNrLoader cache
-    reviews.forEach(review =>
-      this.reviewByNrLoader.prime(review.nr, new Review(review))
-    );
+    reviews.forEach(review => this.reviewByNrLoader.prime(review.nr, review));
 
     const sortByField = (field, direction) => {
       return function(a, b) {

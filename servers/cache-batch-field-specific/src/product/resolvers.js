@@ -1,36 +1,49 @@
 export default {
   Query: {
-    product: (root, { nr }, { repository }) => {
-      return repository.product.get(parseInt(nr));
-    },
+    product: (root, { nr }) => ({ nr: parseInt(nr) }),
     products: (root, args, { repository }) => {
       return repository.product.all();
     }
   },
   Product: {
-    producer: ({ producer }, args, { repository }) => {
-      return repository.producer.get(producer);
+    nr: ({ nr }) => nr,
+    label: async ({ nr }, _, { repository }) => {
+      const { label } = await repository.product.get(nr);
+      return label;
     },
-    type: ({ nr }, _, { repository }) => {
-      return repository.productType.findBy({ product: nr });
+    comment: async ({ nr }, _, { repository }) => {
+      const { comment } = await repository.product.get(nr);
+      return comment;
     },
-    features: ({ nr }, _, { repository }) => {
-      return repository.productFeature.findBy({ product: nr });
+    producer: async ({ nr }, _, { repository }) => {
+      const { producer } = await repository.product.get(nr);
+      return { nr: producer };
     },
-    reviews: ({ nr }, { order }, { repository }) => {
-      // using || {} because order might be undefined which otherwise will throw an error.
+    type: async ({ nr }, _, { repository }) => {
+      const productType = await repository.productType.findBy({ product: nr });
+      return { nr: productType.nr };
+    },
+    features: async ({ nr }, _, { repository }) => {
+      const productFeatures = await repository.productFeature.findBy({
+        product: nr
+      });
+      return productFeatures.map(({ nr }) => ({ nr }));
+    },
+    reviews: async ({ nr }, { order }, { repository }) => {
       const { field, direction } = order || {};
-      return repository.review.sortBy({
+      const reviews = await repository.review.sortBy({
         productId: nr,
         field,
         direction
       });
+      return reviews.map(({ nr }) => ({ nr }));
     },
-    offers: ({ nr }, { where }, { repository }) => {
-      return repository.offer.productOffers(
+    offers: async ({ nr }, { where }, { repository }) => {
+      const offers = await repository.offer.productOffers(
         { where, productNr: nr },
         repository
       );
+      return offers.map(({ nr }) => ({ nr }));
     }
   }
 };

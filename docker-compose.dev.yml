@@ -3,11 +3,11 @@ version: "3.7"
 services:
   server:
     build:
-      context: ./server
+      context: ./servers/cache-batch-field-specific
       dockerfile: Dockerfile.dev
     volumes:
-      - ./server:/usr/src/app
-      - nodemodules:/usr/src/app/node_modules
+      - ./servers/cache-batch-field-specific:/usr/src/app
+      - /usr/src/app/node_modules
     ports:
       - 4000:4000
       - 9229:9229
@@ -30,4 +30,3 @@ services:
 
 volumes:
   mysql-db:
-  nodemodules:

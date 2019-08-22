@@ -4,6 +4,6 @@ export default class ProductType {
     this.nr = args.nr;
     this.label = args.label;
     this.comment = args.comment;
-    this.parentId = args.parent;
+    this.parent = args.parent;
   }
 }

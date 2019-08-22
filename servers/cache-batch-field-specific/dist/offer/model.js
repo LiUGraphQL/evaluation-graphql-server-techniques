@@ -8,9 +8,10 @@ export default class Offer {
     this.deliveryDays = args.deliveryDays;
     this.offerWebpage = args.offerWebpage;
     this.publisher = args.publisher;
-    this.publishDate = args.publishDate;
-    // Relations
-    this.product = args.product;
-    this.vendor = args.vendor;
+    this.publishDate = args.publishDate; // Relations
+
+    this.productId = args.product;
+    this.vendorId = args.vendor;
   }
+
 }
