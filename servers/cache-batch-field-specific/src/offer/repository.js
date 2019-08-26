@@ -29,8 +29,15 @@ const getOfferByVendorNr = vendorNrs => {
   });
 };
 
+const getAllOffers = keys => {
+  let query = db.select().from("offer");
+
+  return query.then(rows => [rows.map(row => new Offer(row))]);
+};
+
 export default class OfferRepository {
   offerByNrLoader = new DataLoader(getOfferByNrs, { cache });
+  allOfferLoader = new DataLoader(getAllOffers, { cache });
   offerByVendorNrLoader = new DataLoader(getOfferByVendorNr, { cache });
 
   // ! DATALOADED
@@ -39,7 +46,9 @@ export default class OfferRepository {
   }
 
   async all() {
-    return allGeneric(Offer, "offer");
+    let offers = await this.allOfferLoader.load("all");
+    offers.forEach(offer => this.offerByNrLoader.prime(offer.nr, offer));
+    return offers;
   }
 
   // ! DATALOADED
@@ -53,7 +62,12 @@ export default class OfferRepository {
   }
 
   async offers({ where, limit, order }, repos) {
-    let offers = await this.where(where, repos);
+    let offers;
+    if (where) {
+      offers = await this.where(where, repos);
+    } else {
+      offers = await this.all();
+    }
 
     offers = limit ? offers.slice(0, limit) : offers;
     offers = order ? _.orderBy(offers, order) : offers;
@@ -81,7 +95,9 @@ export default class OfferRepository {
     const vendorNrs = vendors.map(vendor => vendor.nr);
 
     let offers = await this.offerByVendorNrLoader.loadMany(vendorNrs);
-    return offers.flat();
+    offers = offers.flat();
+    offers.forEach(offer => this.offerByNrLoader.prime(offer.nr, offer));
+    return offers;
   }
 
   resolveAndField(query, andInput) {

@@ -23,6 +23,13 @@ export default () => {
       "Type of test to run, tp (throughput) or dbc (database-count).",
       "tp"
     )
+    .option(
+      "-i --interval <interval>",
+      "How long the test should run for, default 30 sec",
+      30
+    )
+    .option("-n --name <name>", "Set the name of the output file")
+    .option("-q, --query <query>", "Set the queryTemplate to test", 1)
     .parse(process.argv);
 
   // Constants
@@ -30,7 +37,8 @@ export default () => {
   const maxClients = numCPUs - 1; // The extra one here runs the graphQL server
   const actualQueriesPath = program.actualQueries;
   const SERVER_URL = "http://" + program.server + ":" + program.port;
-  const numWorkers = Math.min(maxClients, program.clients);
+  const numWorkers =
+    program.type === "tp" ? Math.min(maxClients, program.clients) : 1;
 
   // Helper functions
   const isDirectory = source => lstatSync(source).isDirectory();
@@ -52,7 +60,7 @@ export default () => {
     let queryTemplate = dirPath.split("/").pop();
     let queryTemplateNumber = queryTemplate.split("_").pop();
 
-    const unChunkedQueries = queryPaths.map((path, index) => {
+    const queries = queryPaths.map((path, index) => {
       const data = readFileSync(path, "utf-8", (err, data) => {
         if (err) throw err;
         return data;
@@ -60,20 +68,11 @@ export default () => {
       return { index: index + 1, data };
     });
 
-    const chunkedQueries = _.chunk(
-      unChunkedQueries,
-      Math.ceil(unChunkedQueries.length / numWorkers)
-    );
-
     return {
       queryTemplate: parseInt(queryTemplateNumber, 10),
-      queries: chunkedQueries
+      queries
     };
   });
-
-  const sortedQueryTemplates = queryTemplates.sort((a, b) =>
-    a.queryTemplate > b.queryTemplate ? 1 : -1
-  );
 
   for (let i = 0; i < numWorkers; i++) {
     cluster.fork();
@@ -87,20 +86,30 @@ export default () => {
     if (Object.keys(cluster.workers).length === 0) {
       // Time to convert data to some csv
       console.log("All workers are done.");
-      const fields = [
-        { label: "Query Template", value: "queryTemplate" },
-        { label: "Query Number", value: "queryNumber" },
-        { label: "Time (ms)", value: "timeMs" },
-        { label: "Leaf nodes", value: "leafNodes" },
-        { label: "Error", value: "error" }
-      ];
+      let fields;
+      if (program.type === "tp") {
+        fields = [
+          { label: "Query Number", value: "index" },
+          { label: "Error", value: "error" }
+        ];
+      } else {
+        fields = [
+          { label: "Query Number", value: "index" },
+          { label: "Database Request", value: "dbRequests" },
+          { label: "Error", value: "error" }
+        ];
+      }
       const json2csvParser = new Parser({ fields });
       const csv = json2csvParser.parse(collectedData);
       // Create output dir if it doesn't exist
       if (!fs.existsSync("output")) fs.mkdirSync("output");
       // Write to file
+      const outputFileName = program.name
+        ? program.name
+        : `${program.type}-test-${new Date().toISOString()}`;
+
       writeFile(
-        `output/test-${new Date().toISOString()}.csv`,
+        `output/${outputFileName}.csv`,
         csv,
         { encoding: "utf-8" },
         err => {
@@ -112,7 +121,8 @@ export default () => {
     }
   });
 
-  cluster.on("message", (worker, { command, data }, handle) => {
+  // Handle log-data from the workers
+  cluster.on("message", (worker, { command, data }) => {
     switch (command) {
       case "LOGDATA":
         console.log(`worker ${worker.id}:`, data);
@@ -120,27 +130,37 @@ export default () => {
     }
   });
 
-  for (const id in cluster.workers) {
-    cluster.workers[id].send({ command: "ECHO", data: "Hello there" });
-  }
-
-  // Send the queries to respective worker
-  for (const id in cluster.workers) {
-    console.log("worker id:", id);
-    const queriesForWorker = sortedQueryTemplates.map(
-      ({ queryTemplate, queries }) => ({
-        queryTemplate,
-        queries: queries[id - 1]
-      })
+  const qts = queryTemplates.find(
+    qt => qt.queryTemplate === parseInt(program.query)
+  );
+  // Give each worker their queries
+  _.forEach(cluster.workers, (worker, index) => {
+    index = parseInt(index);
+    const slice = Math.floor(
+      (qts.queries.length / Object.keys(cluster.workers).length) * (index - 1)
     );
+    worker.send({
+      command: "QUERIES",
+      data: qts.queries,
+      slice
+    });
+  });
 
-    cluster.workers[id].send({ command: "QUERIES", data: queriesForWorker });
-  }
-
+  // Tell each worker to start
   for (const id in cluster.workers) {
     cluster.workers[id].send({
       command: "START",
       data: { url: SERVER_URL, type: program.type }
     });
+  }
+
+  // If a throughput test is started, stop it after 30s.
+  if (program.type == "tp") {
+    setTimeout(() => {
+      for (const id in cluster.workers) {
+        console.log("killing worker", id);
+        cluster.workers[id].kill();
+      }
+    }, program.interval * 1000);
   }
 };
