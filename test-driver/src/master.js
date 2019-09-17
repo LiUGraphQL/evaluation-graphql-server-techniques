@@ -5,6 +5,7 @@ import fs, { writeFile, lstatSync, readdirSync, readFileSync } from "fs";
 import _ from "lodash";
 import program from "commander";
 import { Parser } from "json2csv";
+import { create } from "domain";
 
 // MASTER
 export default () => {
@@ -30,6 +31,11 @@ export default () => {
     )
     .option("-n --name <name>", "Set the name of the output file")
     .option("-q, --query <query>", "Set the queryTemplate to test", 1)
+    .option(
+      "-r, --repeat <repeat>",
+      "Set the number of times to repeat the test",
+      1
+    )
     .parse(process.argv);
 
   // Constants
@@ -58,7 +64,7 @@ export default () => {
   const queryTemplates = queryTemplatesDirs.map(dirPath => {
     const queryPaths = getFiles(dirPath);
     let queryTemplate = dirPath.split("/").pop();
-    let queryTemplateNumber = queryTemplate.split("_").pop();
+    let queryTemplateNumber = queryTemplate.split("T").pop();
 
     const queries = queryPaths.map((path, index) => {
       const data = readFileSync(path, "utf-8", (err, data) => {
@@ -74,16 +80,34 @@ export default () => {
     };
   });
 
-  for (let i = 0; i < numWorkers; i++) {
-    cluster.fork();
-  }
+  let workerCount = 0;
+
+  const createWorkers = () => {
+    for (let i = 0; i < numWorkers; i++) {
+      cluster.fork();
+      workerCount += 1;
+    }
+  };
+
+  const killWorkers = () => {
+    for (const id in cluster.workers) {
+      console.log("killing worker", id);
+      cluster.workers[id].kill();
+    }
+  };
+
+  let currentRun = 1;
 
   let collectedData = [];
+  const resetCollectedData = () => {
+    collectedData = [];
+  };
 
   cluster.on("exit", (worker, code, signal) => {
     console.log(`worker ${worker.process.pid} died`);
+    workerCount -= 1;
 
-    if (Object.keys(cluster.workers).length === 0) {
+    if (workerCount === 0) {
       // Time to convert data to some csv
       console.log("All workers are done.");
       let fields;
@@ -109,15 +133,16 @@ export default () => {
         : `${program.type}-test-${new Date().toISOString()}`;
 
       writeFile(
-        `output/${outputFileName}.csv`,
+        `output/${outputFileName}-${currentRun}.csv`,
         csv,
         { encoding: "utf-8" },
         err => {
           if (err) throw err;
-          console.log("Output has been saved, exiting");
-          process.exit();
+          console.log("Output has been saved.");
         }
       );
+
+      reset();
     }
   });
 
@@ -133,34 +158,50 @@ export default () => {
   const qts = queryTemplates.find(
     qt => qt.queryTemplate === parseInt(program.query)
   );
-  // Give each worker their queries
-  _.forEach(cluster.workers, (worker, index) => {
-    index = parseInt(index);
-    const slice = Math.floor(
-      (qts.queries.length / Object.keys(cluster.workers).length) * (index - 1)
-    );
-    worker.send({
-      command: "QUERIES",
-      data: qts.queries,
-      slice
+  const distributeQueries = () => {
+    let index = 1;
+    _.forEach(cluster.workers, worker => {
+      const slice = Math.floor(
+        (qts.queries.length / program.clients) * (index - 1)
+      );
+      worker.send({
+        command: "QUERIES",
+        data: qts.queries,
+        slice
+      });
+      index += 1;
     });
-  });
+  };
 
-  // Tell each worker to start
-  for (const id in cluster.workers) {
-    cluster.workers[id].send({
-      command: "START",
-      data: { url: SERVER_URL, type: program.type }
-    });
-  }
+  const startWorkers = () => {
+    for (const id in cluster.workers) {
+      cluster.workers[id].send({
+        command: "START",
+        data: { url: SERVER_URL, type: program.type }
+      });
+    }
+  };
 
-  // If a throughput test is started, stop it after 30s.
-  if (program.type == "tp") {
-    setTimeout(() => {
-      for (const id in cluster.workers) {
-        console.log("killing worker", id);
-        cluster.workers[id].kill();
-      }
-    }, program.interval * 1000);
-  }
+  const start = () => {
+    createWorkers();
+    distributeQueries();
+    startWorkers();
+    // If a throughput test is started, stop it after 30s.
+    if (program.type == "tp") {
+      setTimeout(() => {
+        killWorkers();
+      }, program.interval * 1000);
+    }
+  };
+
+  const reset = () => {
+    if (currentRun < program.repeat) {
+      currentRun += 1;
+      resetCollectedData();
+      setTimeout(start, 1000);
+    } else {
+      console.log("Test is complete, exiting.");
+    }
+  };
+  start();
 };

@@ -4,7 +4,6 @@ services:
   server:
     build:
       context: ./servers/cache-batch-field-specific
-      dockerfile: Dockerfile.dev
     volumes:
       - ./servers/cache-batch-field-specific:/usr/src/app
       - /usr/src/app/node_modules

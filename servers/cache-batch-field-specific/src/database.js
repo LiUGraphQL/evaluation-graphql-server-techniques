@@ -8,5 +8,5 @@ export default new Knex({
     password: "pass",
     database: "benchmark"
   },
-  pool: { min: 0, max: 10 }
+  pool: { min: 1, max: 10 }
 });

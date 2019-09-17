@@ -19,7 +19,14 @@ const getVendorByNr = nrs => {
 const getAllVendors = keys => {
   let query = db.select().from("vendor");
 
-  return query.then(rows => [rows.map(row => new Vendor(row))]);
+  return query.then(rows => {
+    const res = rows.map(row => new Vendor(row));
+    const arr = [];
+    keys.forEach(el => {
+      arr.push(res);
+    });
+    return arr;
+  });
 };
 
 export default class VendorRepository {

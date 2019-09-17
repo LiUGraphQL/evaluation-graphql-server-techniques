@@ -3,7 +3,7 @@ import DataLoader from "dataloader";
 import Offer from "./model";
 import db from "../database";
 import { simpleSortRows, allGeneric } from "../helpers";
-import { cache } from "../helpers";
+import { cache } from "../config";
 
 const getOfferByNrs = nrs => {
   const uniqueNrs = _.uniq(nrs);

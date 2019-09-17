@@ -1,3 +1,5 @@
+import "core-js"
+import "regenerator-runtime/runtime"
 import dotenv from "dotenv";
 import { ApolloServer } from "apollo-server";
 

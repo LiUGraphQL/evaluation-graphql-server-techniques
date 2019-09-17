@@ -1,3 +1,6 @@
+import "core-js";
+import "regenerator-runtime/runtime";
+
 import { ApolloServer } from "apollo-server";
 
 import typeDefs from "./typeDefs";

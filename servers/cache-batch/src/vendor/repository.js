@@ -2,7 +2,7 @@ import Vendor from "./model";
 import _ from "lodash";
 import db from "../database";
 import DataLoader from "dataloader";
-import { simpleSortRows, allGeneric } from "../helpers";
+import { simpleSortRows } from "../helpers";
 import { cache } from "../config";
 
 const getVendorByNr = nrs => {
@@ -16,10 +16,19 @@ const getVendorByNr = nrs => {
   return query.then(rows => simpleSortRows(rows, nrs, Vendor));
 };
 
+// If this gets called multiple times in same tick it needs to
+// return keys.length copies of the result...
 const getAllVendors = keys => {
   let query = db.select().from("vendor");
 
-  return query.then(rows => [rows.map(row => new Vendor(row))]);
+  return query.then(rows => {
+    const res = rows.map(row => new Vendor(row));
+    const arr = [];
+    keys.forEach(el => {
+      arr.push(res);
+    });
+    return arr;
+  });
 };
 
 export default class VendorRepository {

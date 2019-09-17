@@ -24,6 +24,7 @@ export default () => {
 
   const errorHandler = ({ query, error }) => {
     console.log("ERROR - EXITING");
+    console.log(cursor);
     console.log("QUERY:", query);
     console.log(prettyjson.render(error));
     process.exit(1);
